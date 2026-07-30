@@ -28,13 +28,14 @@ Phased delivery. Each phase is independently demoable.
 
 ---
 
-## Phase 2 — Auto Assignment & Notifications
+## Phase 2 — Auto Assignment & Notifications ✅ in package 0.3.0
 - `AssignmentEngine` (max 10/day, round-robin, skip offline/leave/inactive)
-- Employee availability field + leave module (minimal)
+- Employee availability fields + `BS_Leave` module
 - Workload dashlet for Admin
-- Email + in-app notifications for order/assign/status/docs
+- Email + in-app `BS_Notifications` center
+- Schedulers: document reminders + idle order escalation
 
-**Exit:** New order auto-assigns; admin sees workload; emails fire.
+**Exit:** New order auto-assigns; admin sees workload; leave skips assignment; notifications + reminder jobs available.
 
 ---
 

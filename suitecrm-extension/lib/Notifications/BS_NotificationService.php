@@ -27,8 +27,7 @@ class BS_NotificationService
 
     public function unassignedQueueAlert($orderId)
     {
-        $admins = $this->getAdminUserIds();
-        foreach ($admins as $adminId) {
+        foreach ($this->getAdminUserIds() as $adminId) {
             $this->notifyUser($adminId, 'unassigned_order', [
                 'order_id' => $orderId,
                 'message' => 'Order could not be auto-assigned. Manual assignment required.',
@@ -65,20 +64,46 @@ class BS_NotificationService
             'order_id' => $order->id,
             'message' => $note ?: ('Additional documents required for ' . $order->name),
         ]);
+        if (!empty($order->assigned_user_id)) {
+            $this->notifyUser($order->assigned_user_id, 'documents_required', [
+                'order_id' => $order->id,
+                'message' => $note ?: ('Documents pending on order ' . $order->name),
+            ]);
+        }
+    }
+
+    /** Public wrappers for schedulers */
+    public function notifyUserPublic($userId, $event, array $payload)
+    {
+        $this->notifyUser($userId, $event, $payload);
+    }
+
+    public function getAdminUserIdsPublic()
+    {
+        return $this->getAdminUserIds();
     }
 
     protected function notifyUser($userId, $event, array $payload)
     {
-        $this->writeInApp('user', $userId, $event, $payload);
-        $this->sendEmailToUser($userId, $event, $payload);
-        // Optional: SMS / WhatsApp adapters
+        $cfg = $GLOBALS['sugar_config']['bs_notifications'] ?? [];
+        if (!isset($cfg['in_app']) || !empty($cfg['in_app'])) {
+            $this->writeInApp('user', $userId, $event, $payload);
+        }
+        if (!isset($cfg['email']) || !empty($cfg['email'])) {
+            $this->sendEmailToUser($userId, $event, $payload);
+        }
         $this->dispatchOptionalChannels('user', $userId, $event, $payload);
     }
 
     protected function notifyContact($contactId, $event, array $payload)
     {
-        $this->writeInApp('contact', $contactId, $event, $payload);
-        $this->sendEmailToContact($contactId, $event, $payload);
+        $cfg = $GLOBALS['sugar_config']['bs_notifications'] ?? [];
+        if (!isset($cfg['in_app']) || !empty($cfg['in_app'])) {
+            $this->writeInApp('contact', $contactId, $event, $payload);
+        }
+        if (!isset($cfg['email']) || !empty($cfg['email'])) {
+            $this->sendEmailToContact($contactId, $event, $payload);
+        }
         $this->dispatchOptionalChannels('contact', $contactId, $event, $payload);
     }
 
@@ -88,19 +113,49 @@ class BS_NotificationService
         if (!$this->tableExists('bs_notifications')) {
             return;
         }
+
         $id = create_guid();
         $now = $GLOBALS['timedate']->nowDb();
+        $msg = $payload['message'] ?? $event;
+        $orderId = $payload['order_id'] ?? '';
+        $assigned = ($recipientType === 'user') ? $recipientId : '';
+
+        // Prefer bean if module registered
+        if (class_exists('BeanFactory')) {
+            $bean = BeanFactory::newBean('BS_Notifications');
+            if (!empty($bean)) {
+                $bean->id = $id;
+                $bean->new_with_id = true;
+                $bean->name = substr($event . ': ' . $msg, 0, 150);
+                $bean->recipient_type = $recipientType;
+                $bean->recipient_id = $recipientId;
+                $bean->event_code = $event;
+                $bean->message = $msg;
+                $bean->payload_json = json_encode($payload);
+                $bean->is_read = 0;
+                $bean->related_order_id = $orderId;
+                $bean->assigned_user_id = $assigned;
+                $bean->save();
+                return;
+            }
+        }
+
         $db->query(sprintf(
             "INSERT INTO bs_notifications
-             (id, recipient_type, recipient_id, event_code, message, payload_json, is_read, date_entered, deleted)
-             VALUES (%s, %s, %s, %s, %s, %s, 0, %s, 0)",
+             (id, name, date_entered, date_modified, deleted, assigned_user_id,
+              recipient_type, recipient_id, event_code, message, payload_json, is_read, related_order_id)
+             VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s, %s, %s, 0, %s)",
             $db->quoted($id),
+            $db->quoted(substr($event . ': ' . $msg, 0, 150)),
+            $db->quoted($now),
+            $db->quoted($now),
+            $db->quoted($assigned),
             $db->quoted($recipientType),
             $db->quoted($recipientId),
             $db->quoted($event),
-            $db->quoted($payload['message'] ?? $event),
+            $db->quoted($msg),
             $db->quoted(json_encode($payload)),
-            $db->quoted($now)
+            $db->quoted($orderId)
         ));
     }
 
@@ -145,13 +200,13 @@ class BS_NotificationService
             'unassigned_order' => 'Unassigned order alert',
             'status_changed' => 'Order status updated',
             'documents_required' => 'Documents required',
+            'idle_escalation' => 'Idle order escalation',
         ];
         return $map[$event] ?? ('CRM: ' . $event);
     }
 
     protected function dispatchOptionalChannels($type, $id, $event, array $payload)
     {
-        // Hook point for SMS / WhatsApp Business API adapters.
         $GLOBALS['log']->debug("[BS_NotificationService] optional channels {$type}/{$id}/{$event}");
     }
 
@@ -169,7 +224,7 @@ class BS_NotificationService
     protected function tableExists($table)
     {
         global $db;
-        $res = $db->query("SHOW TABLES LIKE " . $db->quoted($table));
+        $res = $db->query('SHOW TABLES LIKE ' . $db->quoted($table));
         return (bool) $db->fetchByAssoc($res);
     }
 }

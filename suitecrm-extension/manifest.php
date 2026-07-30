@@ -1,12 +1,12 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (Phase 1 + Services tab fix)
+ * Module Loader manifest — SuiteCRM 7.15.1 (Phase 2)
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Phase 1 + enable Services/Orders tabs in navigation',
-    'version' => '0.2.1',
+    'description' => 'Phase 2: Leave, Notifications, document reminders, idle escalation',
+    'version' => '0.3.0',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
@@ -30,6 +30,8 @@ $installdefs = array(
         array('from' => '<basepath>/modules/BS_Orders', 'to' => 'modules/BS_Orders'),
         array('from' => '<basepath>/modules/BS_OrderDocuments', 'to' => 'modules/BS_OrderDocuments'),
         array('from' => '<basepath>/modules/BS_StatusHistory', 'to' => 'modules/BS_StatusHistory'),
+        array('from' => '<basepath>/modules/BS_Leave', 'to' => 'modules/BS_Leave'),
+        array('from' => '<basepath>/modules/BS_Notifications', 'to' => 'modules/BS_Notifications'),
         array('from' => '<basepath>/lib/Assignment', 'to' => 'custom/include/BS/Assignment'),
         array('from' => '<basepath>/lib/Notifications', 'to' => 'custom/include/BS/Notifications'),
         array('from' => '<basepath>/lib/Orders', 'to' => 'custom/include/BS/Orders'),
@@ -38,6 +40,7 @@ $installdefs = array(
         array('from' => '<basepath>/custom/Extension/application/Ext/Language', 'to' => 'custom/Extension/application/Ext/Language'),
         array('from' => '<basepath>/custom/Extension/modules/BS_Orders', 'to' => 'custom/Extension/modules/BS_Orders'),
         array('from' => '<basepath>/custom/Extension/modules/Users', 'to' => 'custom/Extension/modules/Users'),
+        array('from' => '<basepath>/custom/Extension/modules/Schedulers', 'to' => 'custom/Extension/modules/Schedulers'),
     ),
     'post_execute' => array(
         '<basepath>/scripts/post_install.php',

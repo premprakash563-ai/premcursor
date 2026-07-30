@@ -151,14 +151,21 @@ CREATE TABLE IF NOT EXISTS bs_invoices (
 
 CREATE TABLE IF NOT EXISTS bs_notifications (
   id CHAR(36) NOT NULL PRIMARY KEY,
+  name VARCHAR(255) NULL,
+  date_entered DATETIME NULL,
+  date_modified DATETIME NULL,
+  modified_user_id CHAR(36) NULL,
+  created_by CHAR(36) NULL,
+  description TEXT NULL,
+  deleted TINYINT(1) DEFAULT 0,
+  assigned_user_id CHAR(36) NULL,
   recipient_type VARCHAR(20) NULL,
   recipient_id CHAR(36) NULL,
   event_code VARCHAR(50) NULL,
   message TEXT NULL,
   payload_json LONGTEXT NULL,
   is_read TINYINT(1) DEFAULT 0,
-  date_entered DATETIME NULL,
-  deleted TINYINT(1) DEFAULT 0,
+  related_order_id CHAR(36) NULL,
   KEY idx_bs_notif_recipient (recipient_type, recipient_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

@@ -44,14 +44,30 @@ $app_list_strings['bs_service_status_list'] = [
     'inactive' => 'Inactive',
 ];
 
+$app_list_strings['bs_leave_status_list'] = [
+    'pending' => 'Pending',
+    'approved' => 'Approved',
+    'rejected' => 'Rejected',
+    'cancelled' => 'Cancelled',
+];
+
+$app_list_strings['bs_recipient_type_list'] = [
+    'user' => 'User',
+    'contact' => 'Contact',
+];
+
 $app_list_strings['moduleList']['BS_Services'] = 'Services';
 $app_list_strings['moduleList']['BS_Orders'] = 'Service Orders';
 $app_list_strings['moduleList']['BS_OrderDocuments'] = 'Order Documents';
 $app_list_strings['moduleList']['BS_StatusHistory'] = 'Status History';
 $app_list_strings['moduleList']['BS_AssignmentLog'] = 'Assignment Log';
 $app_list_strings['moduleList']['BS_Payments'] = 'Payments';
+$app_list_strings['moduleList']['BS_Leave'] = 'Leave Requests';
+$app_list_strings['moduleList']['BS_Notifications'] = 'Notifications';
 
 $app_list_strings['moduleListSingular']['BS_Services'] = 'Service';
 $app_list_strings['moduleListSingular']['BS_Orders'] = 'Service Order';
 $app_list_strings['moduleListSingular']['BS_OrderDocuments'] = 'Order Document';
 $app_list_strings['moduleListSingular']['BS_StatusHistory'] = 'Status History';
+$app_list_strings['moduleListSingular']['BS_Leave'] = 'Leave Request';
+$app_list_strings['moduleListSingular']['BS_Notifications'] = 'Notification';
