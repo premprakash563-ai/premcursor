@@ -3,7 +3,10 @@
 # Avoids SugarView "There is no action by that name: index".
 set -euo pipefail
 BASE="${1:-$HOME/public_html}"
-REPO_RAW="https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/suitecrm-extension"
+# Pin to commit SHA — raw.githubusercontent.com branch URLs can CDN-cache old files
+COMMIT="${BS_BOARD_COMMIT:-4e348ee}"
+REPO_RAW="https://raw.githubusercontent.com/premprakash563-ai/premcursor/${COMMIT}/suitecrm-extension"
+API_FILE="https://api.github.com/repos/premprakash563-ai/premcursor/contents/suitecrm-extension/custom/include/BS/dashboard_board.php?ref=${COMMIT}"
 cd "$BASE"
 
 mkdir -p custom/include/BS
@@ -12,10 +15,17 @@ mkdir -p custom/application/Ext/EntryPointRegistry
 mkdir -p custom/include/MVC/Controller
 mkdir -p modules/BS_Dashboard
 
-echo "==> Downloading board PHP (self-contained)..."
-curl -fsSL "$REPO_RAW/custom/include/BS/dashboard_board.php" -o custom/include/BS/dashboard_board.php
+echo "==> Downloading board PHP (self-contained, commit ${COMMIT})..."
+if ! curl -fsSL "$REPO_RAW/custom/include/BS/dashboard_board.php" -o custom/include/BS/dashboard_board.php; then
+  echo "raw CDN failed, trying GitHub API..."
+  curl -fsSL "$API_FILE" | php -r '
+    $j = json_decode(stream_get_contents(STDIN), true);
+    if (empty($j["content"])) { fwrite(STDERR, "API download failed\n"); exit(1); }
+    file_put_contents("custom/include/BS/dashboard_board.php", base64_decode($j["content"]));
+  '
+fi
 
-# Keep renderer in sync (optional; board no longer depends on it)
+# Keep renderer/controller in sync (optional; board no longer depends on them)
 curl -fsSL "$REPO_RAW/modules/BS_Dashboard/BoardRenderer.php" -o modules/BS_Dashboard/BoardRenderer.php || true
 curl -fsSL "$REPO_RAW/modules/BS_Dashboard/controller.php" -o modules/BS_Dashboard/controller.php || true
 
@@ -55,12 +65,18 @@ if [ -f include/MVC/Controller/entry_point_registry.php ]; then
   printf '%s\n' "$REG_SNIPPET" >> "$LEGACY"
 fi
 
-# Verify board file has the fix marker (no SugarView bootstrap)
-if grep -q "SugarView\|require_once 'include/entryPoint.php'" custom/include/BS/dashboard_board.php; then
-  echo "WARNING: board file still looks like old SugarView version"
-else
-  echo "OK: board file is self-contained (no SugarView)"
+# Verify board file has the fix marker (must be 0.4.3 self-contained)
+if ! grep -q "Custom Operations Board (0.4.3)" custom/include/BS/dashboard_board.php; then
+  echo "ERROR: board file is NOT 0.4.3. Aborting."
+  echo "First lines:"
+  head -n 12 custom/include/BS/dashboard_board.php
+  exit 1
 fi
+if grep -q "require_once 'include/entryPoint.php'" custom/include/BS/dashboard_board.php; then
+  echo "ERROR: old bootstrap still present. Aborting."
+  exit 1
+fi
+echo "OK: board file is self-contained 0.4.3 (no SugarView)"
 
 # Theme cache safety
 if [ ! -s cache/themes/SuiteP/Dawn/style.css ]; then
