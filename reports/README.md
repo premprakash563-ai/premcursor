@@ -26,3 +26,11 @@ Uses existing app includes:
 - `../config/database.php`
 - `../classes/auth.php`
 - `../includes/header.php`, `sidebar.php`, `footer.php`
+
+## Stock In Hand
+
+Path: `sale/stock_in_hand.php` (copy also in `reports/`)
+
+- MIS-style tab form (Date, Category, Company, Product Group, Color, Description, Company No, Size, Sp Inst, Party, City, Product, Tax, Columns)
+- Dynamic multiselect filters from DB
+- Query: Stock R/I as-on-date, optional non-zero balance subquery, BarcDays, Ist–VIth grouping
