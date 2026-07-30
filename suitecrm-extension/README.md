@@ -18,6 +18,10 @@ Drop this package into a SuiteCRM 7.15.1 installation and run **Admin → Repair
 
 ## Install on SuiteCRM 7.15.1
 
+> **Use Module Loader, not Upgrade Wizard.**  
+> Path: Admin → Developer Tools → **Module Loader**  
+> URL tip: `index.php?module=Administration&action=UpgradeWizard` is wrong; Module Loader is under Developer Tools.
+
 ### Option A — Manual copy (dev)
 
 1. Copy `modules/BS_*` → `{suitecrm}/modules/`
