@@ -194,6 +194,12 @@ CREATE TABLE IF NOT EXISTS bs_chat_messages (
   KEY idx_bs_msg_thread (thread_id, date_entered)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS bs_dashboard (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  name VARCHAR(255) NULL,
+  deleted TINYINT(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS bs_leave (
   id CHAR(36) NOT NULL PRIMARY KEY,
   name VARCHAR(255) NULL,

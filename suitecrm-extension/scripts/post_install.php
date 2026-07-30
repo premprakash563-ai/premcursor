@@ -11,6 +11,7 @@ function bs_enable_module_tabs()
     require_once 'modules/MySettings/TabController.php';
 
     $want = [
+        'BS_Dashboard',
         'BS_Services',
         'BS_Orders',
         'BS_OrderDocuments',

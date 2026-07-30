@@ -56,6 +56,7 @@ $app_list_strings['bs_recipient_type_list'] = [
     'contact' => 'Contact',
 ];
 
+$app_list_strings['moduleList']['BS_Dashboard'] = 'Operations Board';
 $app_list_strings['moduleList']['BS_Services'] = 'Services';
 $app_list_strings['moduleList']['BS_Orders'] = 'Service Orders';
 $app_list_strings['moduleList']['BS_OrderDocuments'] = 'Order Documents';
@@ -65,6 +66,7 @@ $app_list_strings['moduleList']['BS_Payments'] = 'Payments';
 $app_list_strings['moduleList']['BS_Leave'] = 'Leave Requests';
 $app_list_strings['moduleList']['BS_Notifications'] = 'Notifications';
 
+$app_list_strings['moduleListSingular']['BS_Dashboard'] = 'Operations Board';
 $app_list_strings['moduleListSingular']['BS_Services'] = 'Service';
 $app_list_strings['moduleListSingular']['BS_Orders'] = 'Service Order';
 $app_list_strings['moduleListSingular']['BS_OrderDocuments'] = 'Order Document';

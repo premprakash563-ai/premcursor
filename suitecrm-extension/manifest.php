@@ -1,13 +1,13 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (0.3.3 recovery-safe theme)
- * Does NOT write into core themes/SuiteP (avoids breaking login CSS).
+ * Module Loader manifest — SuiteCRM 7.15.1 (0.4.0 Operations Board)
+ * Professional dashboard as its own page (NO global CSS hook).
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Dashboard dashlet polish only (global theme CSS hook disabled)',
-    'version' => '0.3.4',
+    'description' => 'Operations Board dashboard page + Phase 1/2 modules (theme-safe)',
+    'version' => '0.4.0',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
@@ -27,6 +27,7 @@ $manifest = array(
 $installdefs = array(
     'id' => 'BS_BusinessServiceCRM',
     'copy' => array(
+        array('from' => '<basepath>/modules/BS_Dashboard', 'to' => 'modules/BS_Dashboard'),
         array('from' => '<basepath>/modules/BS_Services', 'to' => 'modules/BS_Services'),
         array('from' => '<basepath>/modules/BS_Orders', 'to' => 'modules/BS_Orders'),
         array('from' => '<basepath>/modules/BS_OrderDocuments', 'to' => 'modules/BS_OrderDocuments'),
@@ -39,7 +40,6 @@ $installdefs = array(
         array('from' => '<basepath>/lib/Orders', 'to' => 'custom/include/BS/Orders'),
         array('from' => '<basepath>/lib/Documents', 'to' => 'custom/include/BS/Documents'),
         array('from' => '<basepath>/lib/Theme', 'to' => 'custom/include/BS/Theme'),
-        array('from' => '<basepath>/custom/themes/SuiteP/css', 'to' => 'custom/themes/SuiteP/css'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Include', 'to' => 'custom/Extension/application/Ext/Include'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Language', 'to' => 'custom/Extension/application/Ext/Language'),
         array('from' => '<basepath>/custom/Extension/application/Ext/LogicHooks', 'to' => 'custom/Extension/application/Ext/LogicHooks'),
