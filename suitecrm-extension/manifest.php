@@ -6,8 +6,8 @@
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Dashboard polish recovery-safe (no core theme overwrite)',
-    'version' => '0.3.3',
+    'description' => 'Dashboard dashlet polish only (global theme CSS hook disabled)',
+    'version' => '0.3.4',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
