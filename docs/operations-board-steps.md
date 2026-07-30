@@ -3,33 +3,35 @@
 Woh error **purane board code** se aata hai (SugarView `index` action).
 Naya code **alag entryPoint** use karta hai — koi `action=index` nahi.
 
-## Sirf yeh SSH command chalao (public_html pe)
+## Sirf yeh SSH command chalao
 
 ```bash
-cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/scripts/deploy-operations-board.sh | bash
+cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/e8628df/scripts/deploy-operations-board.sh | bash
 ```
 
-## Phir browser me (logged in)
+(Commit SHA use karo — branch URL kabhi purana file cache karke de deta hai.)
+
+## Phir browser me (logged in hona zaroori)
 
 ```
 https://yoogleconsultancy.in/index.php?entryPoint=bs_operations_board
 ```
 
-Page ke neeche footer me likha hona chahiye: **Custom Operations Board (0.4.3)**
+Page ke neeche footer: **Custom Operations Board (0.4.3)**
 
-## Mat kholo (broken / purana)
+## Mat kholo (broken)
 
 ```
 index.php?module=BS_Dashboard&action=index
 ```
 
-Agar yeh URL se redirect hota hai to theek — warna seedha `entryPoint=bs_operations_board` use karo.
-
-## Confirm files
+## Confirm
 
 ```bash
-head -n 8 ~/public_html/custom/include/BS/dashboard_board.php
+grep -n "0.4.3" ~/public_html/custom/include/BS/dashboard_board.php
 grep -n bs_operations_board ~/public_html/custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php
 ```
 
-Pehli lines me `self-contained entry point` / `DO NOT use SugarView` dikhna chahiye.
+## Optional: Module Loader zip
+
+https://github.com/premprakash563-ai/premcursor/raw/e8628df/BS_BusinessServiceCRM-0.4.3.zip
