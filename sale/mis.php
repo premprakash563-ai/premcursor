@@ -215,7 +215,7 @@ $groupExprMap = [
     'Category'     => "UPPER(LTRIM(RTRIM(IFNULL(c.c_name,''))))",
     'Company'      => "UPPER(LTRIM(RTRIM(IFNULL(cd.comp_name,''))))",
     'Color'        => "UPPER(LTRIM(RTRIM(IFNULL(col.Color_name,''))))",
-    'Description'  => "UPPER(LTRIM(RTRIM(IFNULL(COALESCE(d.Des_Name, p.PRODUCT_NAME),''))))",
+    'Description'  => "UPPER(LTRIM(RTRIM(IFNULL(p.PRODUCT_NAME,''))))",
     'CompanyNo'    => "UPPER(LTRIM(RTRIM(IFNULL(p.comp_no,''))))",
 ];
 
@@ -243,7 +243,7 @@ if (!empty($selColor)) {
     $whereParts[] = 'col.Color_name IN (' . inListSql($db, $selColor) . ')';
 }
 if (!empty($selDesc)) {
-    $whereParts[] = '(COALESCE(d.Des_Name, p.PRODUCT_NAME) IN (' . inListSql($db, $selDesc) . '))';
+    $whereParts[] = '(p.PRODUCT_NAME IN (' . inListSql($db, $selDesc) . '))';
 }
 if (!empty($selCompNo)) {
     $whereParts[] = 'p.comp_no IN (' . inListSql($db, $selCompNo) . ')';
@@ -277,20 +277,21 @@ if ($payMode === 'cash') {
     $whereParts[] = "IFNULL(sb.Bank_Code,'')='' AND IFNULL(sb.Wallet_Code,'')='' AND IFNULL(sb.SubCode,'')<>''";
 }
 
-if ($onlyDiscount)   $whereParts[] = '(IFNULL(st.SDISC_AMT,0) > 0 OR IFNULL(sb.Disc,0) > 0 OR IFNULL(st.SDISC,0) > 0)';
+if ($onlyDiscount)   $whereParts[] = '(IFNULL(st.SDISC_AMT,0) > 0 OR IFNULL(sb.Disc,0) > 0)';
 if ($withoutAmount)  $whereParts[] = 'IFNULL(st.AMOUNT,0) = 0';
-if ($withoutDiscPct) $whereParts[] = 'IFNULL(st.SDISC,0) = 0';
+if ($withoutDiscPct) $whereParts[] = 'IFNULL(st.SDISC_AMT,0) = 0 AND IFNULL(sb.Disc,0) = 0';
 if ($withoutRep)     $whereParts[] = "(IFNULL(rp.Rp_Name,'')='' OR rp.Rp_Name IS NULL)";
 
 $whereCommon = implode(' AND ', $whereParts);
 
 /**
- * Disc Amt formula (same as reference query, simplified algebraically):
- *   Stock.SDisc_Amt + (Stock.Tot_Amt * SBill1.Disc / 100)
- * Gross Amt = Stock.ItemNetAmt
+ * Disc Amt (reference): Stock.SDisc_Amt + (Tot_Amt * SBill1.Disc / 100)
+ * Columns aligned to existing app stock summary: SDISC_AMT, TOT_AMOUNT
  */
-$discAmtExpr = '(IFNULL(st.SDISC_AMT,0) + (IFNULL(st.TOT_AMT, IFNULL(st.TOT_AMOUNT,0)) * IFNULL(sb.Disc,0) / 100))';
-$grossExpr   = 'IFNULL(st.ItemNetAmt, IFNULL(st.TOT_AMT, IFNULL(st.TOT_AMOUNT,0)))';
+$discAmtExpr = '(IFNULL(st.SDISC_AMT,0) + (IFNULL(st.TOT_AMOUNT,0) * IFNULL(sb.Disc,0) / 100))';
+$grossExpr   = 'IFNULL(st.TOT_AMOUNT, IFNULL(st.AMOUNT,0))';
+$sdiscExpr   = 'CASE WHEN IFNULL(st.AMOUNT,0)=0 THEN 0 ELSE ROUND(IFNULL(st.SDISC_AMT,0) * 100 / NULLIF(st.AMOUNT,0), 2) END';
+$rateExpr    = 'IFNULL(st.AMOUNT / NULLIF(st.QTY,0), 0)';
 
 $selectCols = "
     {$grpSql[1]}, {$grpSql[2]}, {$grpSql[3]}, {$grpSql[4]}, {$grpSql[5]}, {$grpSql[6]},
@@ -305,13 +306,13 @@ $selectCols = "
     LTRIM(RTRIM(IFNULL(pg.ProdGroup_Name,''))) AS ProdGroup_Name,
     LTRIM(RTRIM(IFNULL(cd.comp_name,''))) AS Comp_Name,
     LTRIM(RTRIM(IFNULL(c.c_name,''))) AS Category,
-    LTRIM(RTRIM(IFNULL(COALESCE(d.Des_Name, p.PRODUCT_NAME),''))) AS Des_Name,
+    LTRIM(RTRIM(IFNULL(p.PRODUCT_NAME,''))) AS Des_Name,
     LTRIM(RTRIM(IFNULL(col.Color_name,''))) AS Color_Name,
     LTRIM(RTRIM(IFNULL(sm.s_name,''))) AS Size,
     LTRIM(RTRIM(IFNULL(si1.s_name,''))) AS Inst1,
     LTRIM(RTRIM(IFNULL(si2.s_name,''))) AS Inst2,
     LTRIM(RTRIM(IFNULL(si3.s_name,''))) AS Inst3,
-    IFNULL(p.HSN,'' ) AS HSN,
+    '' AS HSN,
     st.V_TYPE AS TypeName
 ";
 
@@ -324,7 +325,6 @@ $fromJoins = "
     LEFT JOIN productgroup pg ON p.ProdGroup_Code = pg.ProdGroup_Code
     LEFT JOIN compdetail cd ON p.COMP_CODE = cd.Comp_code
     LEFT JOIN category c ON p.CAT_CODE = c.C_code
-    LEFT JOIN description d ON p.Desc_Code = d.Des_Code
     LEFT JOIN color col ON p.COLOR_CODE = col.Color_code
     LEFT JOIN sizemaster sm ON p.SIZE_CODE = sm.s_code
     LEFT JOIN specialinst si1 ON p.INST1_CODE = si1.s_code
@@ -336,9 +336,9 @@ $fromJoins = "
 $saleSelect = "
     SELECT $selectCols,
         st.QTY AS Qty,
-        st.Rate AS Rate,
+        $rateExpr AS Rate,
         st.AMOUNT AS Amount,
-        IFNULL(st.SDISC,0) AS SDisc,
+        $sdiscExpr AS SDisc,
         $discAmtExpr AS SDisc_Amt,
         $grossExpr AS GrossAmt,
         4 AS StatusCode
@@ -349,9 +349,9 @@ $saleSelect = "
 $returnSelect = "
     SELECT $selectCols,
         -st.QTY AS Qty,
-        st.Rate AS Rate,
+        $rateExpr AS Rate,
         -st.AMOUNT AS Amount,
-        IFNULL(st.SDISC,0) AS SDisc,
+        $sdiscExpr AS SDisc,
         -($discAmtExpr) AS SDisc_Amt,
         -($grossExpr) AS GrossAmt,
         5 AS StatusCode
@@ -380,22 +380,30 @@ if ($hasFilters) {
         SUM(Qty) AS Qty, SUM(Amount) AS Amount,
         SUM(SDisc_Amt) AS SDisc_Amt, SUM(GrossAmt) AS GrossAmt
         FROM ($unionSql) AS T";
-    $tRes = $db->query($countSql);
-    if ($tRes) {
-        $tRow = $tRes->fetch_assoc();
-        $totalRows = (int)($tRow['cnt'] ?? 0);
-        foreach ($totals as $k => $_) $totals[$k] = (float)($tRow[$k] ?? 0);
-    } else {
-        $queryErr = $db->error;
+    try {
+        $tRes = $db->query($countSql);
+        if ($tRes) {
+            $tRow = $tRes->fetch_assoc();
+            $totalRows = (int)($tRow['cnt'] ?? 0);
+            foreach ($totals as $k => $_) $totals[$k] = (float)($tRow[$k] ?? 0);
+        } else {
+            $queryErr = $db->error;
+        }
+    } catch (Throwable $e) {
+        $queryErr = $e->getMessage();
     }
 
     if (!$queryErr && $totalRows > 0) {
         $offset = ($page - 1) * $rowsPerPage;
-        $pRes = $db->query("SELECT * FROM ($unionSql) AS mis $orderBy LIMIT $rowsPerPage OFFSET $offset");
-        if ($pRes) {
-            while ($r = $pRes->fetch_assoc()) $rows[] = $r;
-        } else {
-            $queryErr = $db->error;
+        try {
+            $pRes = $db->query("SELECT * FROM ($unionSql) AS mis $orderBy LIMIT $rowsPerPage OFFSET $offset");
+            if ($pRes) {
+                while ($r = $pRes->fetch_assoc()) $rows[] = $r;
+            } else {
+                $queryErr = $db->error;
+            }
+        } catch (Throwable $e) {
+            $queryErr = $e->getMessage();
         }
     }
 }
