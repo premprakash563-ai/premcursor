@@ -5,7 +5,7 @@ Phased delivery. Each phase is independently demoable.
 ---
 
 ## Phase 0 — Foundation
-- Install SuiteCRM (7.14 LTS recommended for classic custom modules; or 8.x with extension package)
+- Install / use SuiteCRM **7.15.1**; deploy `suitecrm-extension/` via Module Loader or manual copy
 - Configure company, email SMTP, SSL, roles: Super Admin / Employee
 - Enable Audit, Security Groups, REST API
 - Deploy this repo’s `suitecrm-extension/` package

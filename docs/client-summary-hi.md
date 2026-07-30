@@ -1,5 +1,9 @@
 # Client summary — SuiteCRM pe kaise banega
 
+## Target version
+
+**SuiteCRM 7.15.1** (confirmed)
+
 ## Short verdict
 
 SuiteCRM **admin + employee CRM** ke liye strong base hai. Client SRD ka customer portal, live chat, India payments, aur auto-assignment **custom** banana hoga.

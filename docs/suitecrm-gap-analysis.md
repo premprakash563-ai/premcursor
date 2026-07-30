@@ -1,6 +1,6 @@
 # SuiteCRM Gap Analysis — Business Service CRM
 
-**Target platform:** SuiteCRM 7.14+ / SuiteCRM 8.x  
+**Target platform:** SuiteCRM **7.15.1** (classic Sugar 7 modules)  
 **Goal:** Map every SRD capability to **Native**, **Configure**, or **Custom build**.
 
 Legend: ✅ Native / configure · ⚙️ Partial (needs extension) · ❌ Custom required

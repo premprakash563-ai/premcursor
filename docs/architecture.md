@@ -124,7 +124,7 @@ Security Groups: one group per employee optional; prefer **owner-based ACL** for
 
 | Layer | Choice |
 |---|---|
-| CRM | SuiteCRM 7.14 LTS or 8.x |
+| CRM | SuiteCRM **7.15.1** (PHP 8.1–8.3, MySQL 8 / MariaDB) |
 | Portal / Website | Next.js or Laravel + Blade |
 | Realtime chat | Soketi / Laravel Reverb / Node WS |
 | Payments | Razorpay first (UPI+cards); PhonePe/Paytm adapters later |
@@ -135,12 +135,14 @@ Security Groups: one group per employee optional; prefer **owner-based ACL** for
 ## File Layout in This Repo
 
 ```text
-docs/                      Requirements & plans
-suitecrm-extension/        Drop-in custom package for SuiteCRM
-  modules/                 Custom bean modules
-  lib/Assignment/          Round-robin engine
-  lib/Notifications/       Channel adapters interface
-  custom/Extension/        Hooks, layouts, language
+docs/                      Requirements & plans (target: SuiteCRM 7.15.1)
+suitecrm-extension/        Module Loader package for SuiteCRM 7.15.1
+  manifest.php             Installer manifest
+  modules/                 Classic bean modules
+  lib/Assignment/          Round-robin engine → custom/include/BS/
+  lib/Notifications/       Channel adapters
+  custom/Extension/        Hooks, Include, language, user fields
   install/                 SQL seed, config defaults
 portal-api/                Spec for portal REST endpoints
+scripts/build-package.sh   Zip builder for Module Loader
 ```

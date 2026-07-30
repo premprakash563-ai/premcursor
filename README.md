@@ -1,6 +1,6 @@
 # Business Service CRM on SuiteCRM
 
-Client SRD implementation package for **Business Service CRM & Client Management System** built on SuiteCRM.
+Client SRD implementation package for **Business Service CRM & Client Management System** on **SuiteCRM 7.15.1**.
 
 ## What's in this repo
 
@@ -15,10 +15,10 @@ Client SRD implementation package for **Business Service CRM & Client Management
 | [`portal-api/openapi.yaml`](portal-api/openapi.yaml) | Customer portal / website REST contract |
 | [`tests/`](tests/) | Assignment logic unit tests |
 
-## SuiteCRM strategy (short)
+## SuiteCRM strategy (short) — v7.15.1
 
-- **Use SuiteCRM** for Admin + Employee ops: Accounts, Contacts, Cases, Documents, ACL, audit, email, reports base.
-- **Custom modules (`BS_*`)** for services, orders, docs review, payments, assignment log.
+- **Use SuiteCRM 7.15.1** for Admin + Employee ops: Accounts, Contacts, Cases, Documents, ACL, audit, email, reports base.
+- **Custom modules (`BS_*`)** via classic beans + `custom/Extension` + Quick Repair (not SuiteCRM 8 extensions).
 - **Custom portal + website** for customers (OTP, booking, timeline, chat, invoices) — customers are Contacts, not CRM Users.
 - **Must-build customs:** auto-assignment (10/day round-robin), India payments/GST invoice, live chat, WhatsApp/SMS adapters.
 

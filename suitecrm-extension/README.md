@@ -1,39 +1,53 @@
 # SuiteCRM Extension — Business Service CRM
 
-Drop this package into a SuiteCRM installation and run Quick Repair & Rebuild (v7) or cache clear (v8).
+**Target:** SuiteCRM **7.15.1** (Sugar 7 classic modules)
+
+Drop this package into a SuiteCRM 7.15.1 installation and run **Admin → Repair → Quick Repair and Rebuild**.
 
 ## Contents
 
 | Path | Purpose |
 |---|---|
-| `modules/BS_*` | Custom module stubs (beans, vardefs, language) |
+| `modules/BS_*` | Custom module beans, vardefs, metadata, language |
 | `lib/Assignment` | Round-robin auto-assignment engine |
 | `lib/Notifications` | Notification channel interfaces |
-| `custom/Extension` | Logic hooks registration samples |
+| `custom/Extension` | Logic hooks, user fields, module registration |
 | `install/schema.sql` | Reference DDL for custom tables |
 | `install/seed_services.sql` | Sample India business services |
+| `manifest.php` | Module Loader package manifest |
 
-## Install (SuiteCRM 7.x)
+## Install on SuiteCRM 7.15.1
+
+### Option A — Manual copy (dev)
 
 1. Copy `modules/BS_*` → `{suitecrm}/modules/`
-2. Copy `lib/` → `{suitecrm}/custom/include/BS/`
+2. Copy `lib/*` → `{suitecrm}/custom/include/BS/`
 3. Merge `custom/Extension/` into `{suitecrm}/custom/Extension/`
-4. Import `install/schema.sql` (or let Module Builder / repair create tables from vardefs)
-5. Admin → Repair → Quick Repair and Rebuild → execute SQL if prompted
-6. Create roles **Super Admin** / **Employee** and ACL as in `docs/data-model-and-roles.md`
-7. Set config `bs_assignment.max_new_enquiries_per_day = 10`
+4. Copy `install/config_override.sample.php` keys into `{suitecrm}/config_override.php`
+5. Admin → Repair → **Quick Repair and Rebuild** → execute any suggested SQL
+6. Optionally import `install/seed_services.sql`
+7. Create roles **Super Admin** / **Employee** and ACL (see `docs/data-model-and-roles.md`)
+8. Set `bs_assignment.max_new_enquiries_per_day = 10`
 
-## Install (SuiteCRM 8.x)
+### Option B — Module Loader zip
 
-Prefer converting beans to an Extension package under `extensions/`. Keep `lib/Assignment` logic identical; wire hooks via Symfony event subscribers.
+```bash
+cd suitecrm-extension
+zip -r ../BS_BusinessServiceCRM.zip . -x '*.git*'
+```
 
-## Modules Included (stubs)
+Then: Admin → Module Loader → upload `BS_BusinessServiceCRM.zip` → Install → Quick Repair and Rebuild.
 
-- BS_Services
-- BS_Orders
-- BS_OrderDocuments
-- BS_StatusHistory
-- BS_AssignmentLog
-- BS_Payments
+## PHP / stack notes (7.15.1)
 
-Chat, invoices, leave, attendance: schema reserved in `install/schema.sql`; full beans can be added in later phases.
+- PHP 8.1–8.3 recommended for SuiteCRM 7.15.x
+- MySQL 8 / MariaDB 10.4+
+- Classic bean modules + `custom/Extension` + Quick Repair (not SuiteCRM 8 Symfony extensions)
+
+## Modules included
+
+- `BS_Services` — service catalog
+- `BS_Orders` — service orders / projects
+- `BS_OrderDocuments` — KYC/doc review
+
+Schema also reserves: payments, invoices, chat, notifications, leave, assignment_log (see `install/schema.sql`).

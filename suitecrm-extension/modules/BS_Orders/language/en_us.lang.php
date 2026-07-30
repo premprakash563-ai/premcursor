@@ -3,6 +3,8 @@
 $mod_strings = [
     'LBL_MODULE_NAME' => 'Service Orders',
     'LBL_MODULE_TITLE' => 'Service Orders',
+    'LNK_NEW_RECORD' => 'Create Order',
+    'LNK_LIST' => 'View Orders',
     'LBL_ACCOUNT' => 'Client',
     'LBL_CONTACT' => 'Customer',
     'LBL_SERVICE' => 'Service',
