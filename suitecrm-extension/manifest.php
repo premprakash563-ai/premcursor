@@ -6,8 +6,8 @@
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Operations Board via safe entryPoint (fixes HTTP 500)',
-    'version' => '0.4.1',
+    'description' => 'Operations Board standalone entryPoint (no SugarView action error)',
+    'version' => '0.4.2',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
