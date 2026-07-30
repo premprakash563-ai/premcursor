@@ -1,15 +1,10 @@
 <?php
 /**
- * Application logic hook — load BS professional theme CSS.
+ * DISABLED BY DESIGN on some hosts: after_ui_frame CSS inject can break SuiteP.
+ * Keep this file present but empty of hooks so Module Loader path stays valid.
+ * Professional look = Home dashlet inline CSS only (BS_AdminDashboardDashlet).
  */
 
 $hook_version = 1;
-$hook_array = [];
-
-$hook_array['after_ui_frame'][] = [
-    99,
-    'BS Professional Theme CSS',
-    'custom/include/BS/Theme/BS_ThemeHook.php',
-    'BS_ThemeHook',
-    'injectCss',
-];
+$hook_array = array();
+// Intentionally no after_ui_frame hooks.
