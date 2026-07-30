@@ -7,7 +7,7 @@ if (!defined('sugarEntry') || !sugarEntry) {
 global $mod_strings;
 
 $module_menu[] = [
-    'index.php?module=BS_Dashboard&action=index',
+    'index.php?entryPoint=bs_operations_board',
     $mod_strings['LNK_BOARD'] ?? 'Open Operations Board',
     'Home',
     'BS_Dashboard',

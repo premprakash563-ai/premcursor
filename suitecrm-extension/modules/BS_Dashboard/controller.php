@@ -1,7 +1,6 @@
 <?php
 /**
- * Full-page Operations Board — visible professional dashboard for client demos.
- * Does not patch SuiteP global CSS (safe on LiteSpeed hosts).
+ * BS_Dashboard module — redirects to safe entry point board.
  */
 
 if (!defined('sugarEntry') || !sugarEntry) {
@@ -19,6 +18,11 @@ class BS_DashboardController extends SugarController
 
     public function action_index()
     {
-        $this->view = 'board';
+        SugarApplication::redirect('index.php?entryPoint=bs_operations_board');
+    }
+
+    public function action_board()
+    {
+        SugarApplication::redirect('index.php?entryPoint=bs_operations_board');
     }
 }
