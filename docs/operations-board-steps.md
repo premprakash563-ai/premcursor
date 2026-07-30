@@ -1,29 +1,35 @@
-# Operations Board (visible custom dashboard) — theme-safe
+# Operations Board — fix "There is no action by that name: index"
 
-Global CRM CSS is hosting pe break karti hai. Isliye alag page banaya:
-**Operations Board** — client ko clear naya professional dashboard dikhega.
+Woh error **purane board code** se aata hai (SugarView `index` action).
+Naya code **alag entryPoint** use karta hai — koi `action=index` nahi.
 
-## Download
-https://github.com/premprakash563-ai/premcursor/raw/cursor/suitecrm-business-service-crm-8700/BS_BusinessServiceCRM-0.4.0.zip
+## Sirf yeh SSH command chalao (public_html pe)
 
-## Install
-1. Admin → Module Loader → Upload → Install
-2. Quick Repair (Execute skip if 403)
-3. Display Modules → enable **Operations Board**
-4. Logout / Login
-
-## Open board (client ko ye dikhao)
-```
-https://yoogleconsultancy.in/index.php?module=BS_Dashboard&action=index
-```
-
-Ya ALL menu → **Operations Board**
-
-## Terminal se files confirm
 ```bash
-ls -la ~/public_html/modules/BS_Dashboard/views/view.board.php
+cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/scripts/deploy-operations-board.sh | bash
 ```
 
-## Note
-Classic SuiteCRM HOME pehle jaisa rahega.
-Naya look **Operations Board** page pe hai — wahi client ko dikhana.
+## Phir browser me (logged in)
+
+```
+https://yoogleconsultancy.in/index.php?entryPoint=bs_operations_board
+```
+
+Page ke neeche footer me likha hona chahiye: **Custom Operations Board (0.4.3)**
+
+## Mat kholo (broken / purana)
+
+```
+index.php?module=BS_Dashboard&action=index
+```
+
+Agar yeh URL se redirect hota hai to theek — warna seedha `entryPoint=bs_operations_board` use karo.
+
+## Confirm files
+
+```bash
+head -n 8 ~/public_html/custom/include/BS/dashboard_board.php
+grep -n bs_operations_board ~/public_html/custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php
+```
+
+Pehli lines me `self-contained entry point` / `DO NOT use SugarView` dikhna chahiye.

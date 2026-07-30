@@ -1,13 +1,13 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (0.4.1 Operations Board entryPoint)
- * Professional dashboard via entryPoint (NO global CSS hook, fixes HTTP 500).
+ * Module Loader manifest — SuiteCRM 7.15.1 (0.4.3 Operations Board)
+ * Self-contained entryPoint — no SugarView, no "action: index" error.
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Operations Board standalone entryPoint (no SugarView action error)',
-    'version' => '0.4.2',
+    'description' => 'Operations Board self-contained entryPoint (fixes no action: index)',
+    'version' => '0.4.3',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
