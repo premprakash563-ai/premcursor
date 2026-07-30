@@ -160,14 +160,25 @@ $f = array(
     'comp_prod_code' => sih_pArr('comp_prod_code'),
     'refno_contains' => sih_pStr('refno_contains'),
     'type_filter'    => sih_pStr('type_filter', 'All'),
-    'grp1' => sih_pStr('grp1'), 'grp2' => sih_pStr('grp2'), 'grp3' => sih_pStr('grp3'),
-    'grp4' => sih_pStr('grp4'), 'grp5' => sih_pStr('grp5'), 'grp6' => sih_pStr('grp6'),
-    'stock_status'   => sih_pStr('stock_status', 'NonZero'),
+    'stock_status'   => sih_pStr('stock_status', 'All'),
+    'valuation_req'  => sih_pStr('valuation_req', 'Yes'),
     'valuation_on'   => sih_pStr('valuation_on', 'MRP'),
     'rate_from'      => sih_pStr('rate_from'),
     'rate_to'        => sih_pStr('rate_to'),
+    'whatsapp_owner' => !empty($_POST['whatsapp_owner']),
     'cols'           => sih_pArr('cols'),
 );
+
+// Grouping levels (same names as MIS: group_1 .. group_6)
+$validGroups = array('ProdGroup','Category','Company','Color','Description','CompanyNo','');
+$grp = array();
+$subTotalReq = array();
+for ($i = 1; $i <= 6; $i++) {
+    // accept both group_N (MIS) and legacy grpN
+    $val = sih_pStr("group_$i", sih_pStr('grp' . $i, ''));
+    $grp[$i] = in_array($val, $validGroups, true) ? $val : '';
+    $subTotalReq[$i] = !empty($_POST["subtot_$i"]);
+}
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $f['as_on_date'])) {
     $f['as_on_date'] = date('Y-m-d');
@@ -177,18 +188,16 @@ $defaultCols = array('CompanyNo','Company','Category','Description','Color','Siz
 $activeCols  = $posted && !empty($f['cols']) ? $f['cols'] : $defaultCols;
 
 $colLabels = array(
-    'CompanyNo' => 'Comp No', 'Company' => 'Company', 'Category' => 'Category',
+    'CompanyNo' => 'Company No', 'Company' => 'Company', 'Category' => 'Category',
     'Description' => 'Description', 'Color' => 'Color', 'Size' => 'Size',
-    'Inst1' => 'Sp Inst 1', 'Inst2' => 'Sp Inst 2', 'Inst3' => 'Sp Inst 3',
-    'ProdGroup' => 'PGroup', 'Party' => 'Party',
-    'RefNo' => 'RefNo', 'RefDate' => 'RefDate', 'BarcDays' => 'Days',
+    'Inst3' => 'Sp Instruction3', 'ProdGroup' => 'Product Group', 'Party' => 'Party',
+    'RefNo' => 'Ref No.', 'RefDate' => 'Ref Date',
 );
 $colField = array(
     'CompanyNo' => 'Comp_No', 'Company' => 'Comp_Name', 'Category' => 'C_Name',
     'Description' => 'Des_Name', 'Color' => 'Color_Name', 'Size' => 'Size_Name',
-    'Inst1' => 'Inst1', 'Inst2' => 'Inst2', 'Inst3' => 'Inst3',
-    'ProdGroup' => 'ProdGroup_Name', 'Party' => 'Sub_Name',
-    'RefNo' => 'RefNo', 'RefDate' => 'RefDate', 'BarcDays' => 'BarcDays',
+    'Inst3' => 'Inst3', 'ProdGroup' => 'ProdGroup_Name', 'Party' => 'Sub_Name',
+    'RefNo' => 'RefNo', 'RefDate' => 'RefDate',
 );
 
 /* ── Grouping SQL expressions (Grp1..Grp6) ─────────────────────────────────── */
@@ -200,7 +209,8 @@ $groupExprMap = array(
     'Description' => "UPPER(TRIM(IFNULL(p.PRODUCT_NAME,'')))",
     'CompanyNo'   => "UPPER(TRIM(IFNULL(p.comp_no, IFNULL(p.Comp_No,''))))",
 );
-$grpKeys = array($f['grp1'], $f['grp2'], $f['grp3'], $f['grp4'], $f['grp5'], $f['grp6']);
+$grpKeys = array();
+for ($i = 1; $i <= 6; $i++) $grpKeys[] = $grp[$i];
 $grpSelect = array();
 for ($i = 0; $i < 6; $i++) {
     $k = $grpKeys[$i];
@@ -221,7 +231,7 @@ $grandValue = 0.0;
 if ($posted) {
     // Rate basis — Sale_Rate is in reference query; other bases fall back if columns exist
     $rateSql = 'IFNULL(p.Sale_Rate,0)';
-    if ($f['valuation_on'] === 'None') {
+    if ($f['valuation_req'] === 'No' || $f['valuation_on'] === 'None') {
         $rateSql = '0';
     }
 
@@ -387,8 +397,13 @@ $groupFieldMap = array(
     'CompanyNo'   => 'Comp_No',
 );
 $activeGroupings = array();
-foreach ($grpKeys as $g) {
-    if ($g !== '' && isset($groupFieldMap[$g])) $activeGroupings[] = $g;
+$activeSubtots = array(); // parallel to activeGroupings: whether that level wants subtotal
+foreach ($grpKeys as $idx => $g) {
+    if ($g !== '' && isset($groupFieldMap[$g])) {
+        $activeGroupings[] = $g;
+        $origLevel = $idx + 1; // group_1 = index 0
+        $activeSubtots[] = !empty($subTotalReq[$origLevel]);
+    }
 }
 
 if (!function_exists('sih_buildTree')) {
@@ -409,7 +424,7 @@ if (!function_exists('sih_buildTree')) {
     }
 }
 if (!function_exists('sih_renderTree')) {
-    function sih_renderTree($node, $depth, $activeCols, $colField, $colLabels) {
+    function sih_renderTree($node, $depth, $activeCols, $colField, $colLabels, $activeSubtots = array()) {
         $stockSum = 0.0; $valueSum = 0.0;
         if (isset($node['__rows__'])) {
             echo '<table class="table table-bordered table-sm sr mb-3"><thead class="table-dark small"><tr>';
@@ -439,10 +454,14 @@ if (!function_exists('sih_renderTree')) {
         foreach ($node as $label => $child) {
             echo '<div class="grp-block" style="margin-left:' . ($depth * 14) . 'px;">';
             echo '<div class="grp-head">' . str_repeat('— ', $depth) . h($label) . '</div>';
-            $res = sih_renderTree($child, $depth + 1, $activeCols, $colField, $colLabels);
+            $res = sih_renderTree($child, $depth + 1, $activeCols, $colField, $colLabels, $activeSubtots);
             $s = $res[0]; $v = $res[1];
             $stockSum += $s; $valueSum += $v;
-            echo '<div class="grp-sub">Subtotal — Stock: ' . number_format($s, 3) . ' &nbsp; Value: ' . number_format($v, 2) . '</div>';
+            $isLast = ($depth >= count($activeSubtots) - 1);
+            $showSub = $isLast || !empty($activeSubtots[$depth]);
+            if ($showSub) {
+                echo '<div class="grp-sub">Subtotal — Stock: ' . number_format($s, 3) . ' &nbsp; Value: ' . number_format($v, 2) . '</div>';
+            }
             echo '</div>';
         }
         return array($stockSum, $valueSum);
@@ -450,6 +469,7 @@ if (!function_exists('sih_renderTree')) {
 }
 
 $tree = ($posted && !$err) ? sih_buildTree($rows, $activeGroupings, $groupFieldMap) : array();
+$jsGroupingOptions = json_encode($groupingFieldOptions, JSON_UNESCAPED_UNICODE);
 
 include '../includes/header.php';
 ?>
@@ -469,7 +489,14 @@ include '../includes/header.php';
 .fg-col-date { flex:0 0 140px; }
 .fg-col-ms { flex:1 1 140px; min-width:130px; max-width:210px; }
 .grp-grid { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; }
-.grp-cell { display:flex; flex-direction:column; flex:1 1 130px; min-width:120px; max-width:180px; }
+.grp-subtot { display:none; margin-top:3px; align-items:center; gap:4px; }
+.grp-subtot.show { display:flex; }
+.date-layout { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+.date-main { flex:1 1 620px; min-width:280px; }
+.date-cols { flex:0 0 200px; background:var(--bg-panel); border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; }
+.date-cols .ob-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:8px; }
+.wa-row { display:flex; justify-content:flex-end; margin-bottom:8px; }
+.wa-row label { font-size:11.5px; display:flex; align-items:center; gap:5px; margin:0; cursor:pointer; }
 .opts-row { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start; }
 .opts-block { background:var(--bg-panel); border:1px solid #e5e7eb; border-radius:6px; padding:8px 12px; flex:1 1 220px; }
 .opts-block .ob-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:6px; }
@@ -534,93 +561,133 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
 <form method="post" id="filterForm">
 <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
 
-<!-- Tabs (same manner as MIS) -->
+<!-- Exact tabs from legacy Stock In Hand screen -->
 <div class="tab-bar" id="sihTabs">
   <?php
   $tabs = array(
-    'date'=>'Date','category'=>'Category','company'=>'Company','prodgroup'=>'Product Group',
-    'color'=>'Color','description'=>'Description','compno'=>'Company No','size'=>'Size',
-    'spinst'=>'Sp Inst','party'=>'Party','city'=>'City','product'=>'Product','tax'=>'Tax %','columns'=>'Columns'
+    'date' => 'Date',
+    'category' => 'Category',
+    'company' => 'Company',
+    'size' => 'Size',
+    'color' => 'Color',
+    'description' => 'Description',
+    'sp1' => 'Sp Instruction1',
+    'sp2' => 'Sp Instruction2',
+    'sp3' => 'Sp Instruction3',
+    'compno' => 'Company No.',
+    'pcode' => 'Product Code',
+    'cpc' => 'CompProdCode',
+    'party' => 'Party',
+    'refno' => 'Ref. No.',
+    'tax' => 'Tax %',
+    'city' => 'City',
+    'type' => 'Type',
+    'prodgroup' => 'Product Group',
   );
   foreach ($tabs as $tid => $tlabel): ?>
     <button type="button" class="tab-btn<?= $tid==='date'?' active':'' ?>" data-tab="<?= h($tid) ?>" onclick="showSihTab('<?= h($tid) ?>')"><?= h($tlabel) ?></button>
   <?php endforeach; ?>
 </div>
 
-<!-- DATE TAB -->
+<!-- ═══════════════ DATE TAB (matches screenshot) ═══════════════ -->
 <div class="tab-pane active" id="tab-date">
-  <div class="filter-card">
-    <div class="fc-title">Date &amp; Grouping</div>
-    <div class="fg-row">
-      <div class="fg-col-date">
-        <span class="fl">As On Date</span>
-        <input type="date" name="as_on_date" value="<?= h($f['as_on_date']) ?>" class="form-control form-control-sm" style="font-size:11.5px;">
-      </div>
-      <div class="fg-col-date">
-        <span class="fl">No. of Days (min age)</span>
-        <input type="number" name="no_of_days" value="<?= h($f['no_of_days']) ?>" class="form-control form-control-sm" style="font-size:11.5px;" min="0" placeholder="Optional">
-      </div>
-      <div class="fg-col-ms">
-        <span class="fl">Ref. No. contains</span>
-        <input type="text" name="refno_contains" value="<?= h($f['refno_contains']) ?>" class="form-control form-control-sm" style="font-size:11.5px;">
-      </div>
-    </div>
-
-    <div class="grp-grid mt-3">
-      <?php
-      $ordinals = array('grp1'=>'Ist Grouping','grp2'=>'IInd Grouping','grp3'=>'IIIrd Grouping','grp4'=>'IVth Grouping','grp5'=>'Vth Grouping','grp6'=>'VIth Grouping');
-      foreach ($ordinals as $name => $label): ?>
-      <div class="grp-cell">
-        <span class="fl"><?= h($label) ?></span>
-        <select name="<?= h($name) ?>" id="<?= h($name) ?>" class="form-select form-select-sm" style="font-size:11.5px;" onchange="onSihGroupChange()">
-          <?php foreach ($groupingFieldOptions as $val => $optLabel): ?>
-          <option value="<?= h($val) ?>" <?= ($f[$name] ?? '') === $val ? 'selected' : '' ?>><?= h($optLabel) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <?php endforeach; ?>
-    </div>
+  <div class="wa-row">
+    <label><input type="checkbox" name="whatsapp_owner" value="1" <?= !empty($f['whatsapp_owner'])?'checked':'' ?>> WhatsApp To Owner</label>
   </div>
 
-  <div class="filter-card">
-    <div class="opts-row">
-      <div class="opts-block">
-        <div class="ob-title">Stock Status</div>
-        <div class="opts-radio-row">
-          <label><input type="radio" name="stock_status" value="All" <?= $f['stock_status']==='All'?'checked':'' ?>> All</label>
-          <label><input type="radio" name="stock_status" value="NonZero" <?= $f['stock_status']==='NonZero'?'checked':'' ?>> Without Zero Balance</label>
-          <label><input type="radio" name="stock_status" value="Positive" <?= $f['stock_status']==='Positive'?'checked':'' ?>> Only Positive</label>
+  <div class="date-layout">
+    <div class="date-main">
+      <div class="filter-card">
+        <div class="fc-title">Date</div>
+        <div class="fg-row">
+          <div class="fg-col-date">
+            <span class="fl">As On Date</span>
+            <input type="date" name="as_on_date" value="<?= h($f['as_on_date']) ?>" class="form-control form-control-sm" style="font-size:11.5px;">
+          </div>
+          <div class="fg-col-date">
+            <span class="fl">No. of Days</span>
+            <input type="number" name="no_of_days" value="<?= h($f['no_of_days']) ?>" class="form-control form-control-sm" style="font-size:11.5px;" min="0">
+          </div>
         </div>
       </div>
-      <div class="opts-block">
-        <div class="ob-title">Stock Valuation On</div>
-        <div class="opts-radio-row">
-          <label><input type="radio" name="valuation_on" value="MRP" <?= $f['valuation_on']==='MRP'?'checked':'' ?>> MRP / Sale Rate</label>
-          <label><input type="radio" name="valuation_on" value="Purchase" <?= $f['valuation_on']==='Purchase'?'checked':'' ?>> Purchase Rate</label>
-          <label><input type="radio" name="valuation_on" value="StockRate" <?= $f['valuation_on']==='StockRate'?'checked':'' ?>> Stock Rate</label>
-          <label><input type="radio" name="valuation_on" value="None" <?= $f['valuation_on']==='None'?'checked':'' ?>> None</label>
-        </div>
-        <div class="rate-pair">
-          <span style="font-size:11px;">Rate From</span>
-          <input type="number" step="0.01" name="rate_from" value="<?= h($f['rate_from']) ?>" class="form-control form-control-sm">
-          <span style="font-size:11px;">To</span>
-          <input type="number" step="0.01" name="rate_to" value="<?= h($f['rate_to']) ?>" class="form-control form-control-sm">
+
+      <div class="filter-card">
+        <div class="fc-title">Grouping Options</div>
+        <div class="grp-grid">
+          <?php
+          $grpLabels = array('Ist Grouping','IInd Grouping','IIIrd Grouping','IVth Grouping','Vth Grouping','VIth Grouping');
+          for ($i = 1; $i <= 6; $i++):
+              $nextFilled = ($i < 6) && !empty($grp[$i + 1]);
+              $chkLabel   = $grp[$i] !== '' ? (isset($groupingFieldOptions[$grp[$i]]) ? $groupingFieldOptions[$grp[$i]] : $grp[$i]) : '';
+          ?>
+          <div class="grp-cell">
+            <span class="fl"><?= h($grpLabels[$i-1]) ?></span>
+            <select name="group_<?= $i ?>" id="group_sel_<?= $i ?>" class="form-select form-select-sm"
+                    data-grp-index="<?= $i ?>" onchange="onGroupChange(<?= $i ?>)" style="font-size:11.5px;">
+              <?php foreach ($groupingFieldOptions as $ov => $ol): ?>
+                <option value="<?= h($ov) ?>" <?= $grp[$i] === $ov ? 'selected' : '' ?>><?= h($ol) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <div class="grp-subtot<?= $nextFilled ? ' show' : '' ?>" id="grp_chk_col_<?= $i ?>">
+              <input type="checkbox" name="subtot_<?= $i ?>" id="subtot_<?= $i ?>" value="1"
+                     <?= !empty($subTotalReq[$i]) ? 'checked' : '' ?> style="accent-color:var(--blue);width:12px;height:12px;">
+              <label for="subtot_<?= $i ?>" id="subtot_lbl_<?= $i ?>" style="font-size:10px;color:var(--blue);font-weight:600;cursor:pointer;margin:0;">
+                <?= h($chkLabel) ?>-wise Total?
+              </label>
+            </div>
+          </div>
+          <?php endfor; ?>
         </div>
       </div>
-      <div class="opts-block">
-        <div class="ob-title">Type</div>
-        <div class="opts-radio-row">
-          <label><input type="radio" name="type_filter" value="All" <?= $f['type_filter']==='All'?'checked':'' ?>> All</label>
-          <label><input type="radio" name="type_filter" value="Local" <?= $f['type_filter']==='Local'?'checked':'' ?>> Local</label>
-          <label><input type="radio" name="type_filter" value="Central" <?= $f['type_filter']==='Central'?'checked':'' ?>> Central</label>
+
+      <div class="filter-card">
+        <div class="opts-row">
+          <div class="opts-block">
+            <div class="ob-title">Stock Valuation Required</div>
+            <div class="opts-radio-row">
+              <label><input type="radio" name="valuation_req" value="Yes" <?= $f['valuation_req']==='Yes'?'checked':'' ?>> Yes</label>
+              <label><input type="radio" name="valuation_req" value="No" <?= $f['valuation_req']==='No'?'checked':'' ?>> No</label>
+            </div>
+          </div>
+          <div class="opts-block">
+            <div class="ob-title">Stock Status</div>
+            <div class="opts-radio-row">
+              <label><input type="radio" name="stock_status" value="All" <?= $f['stock_status']==='All'?'checked':'' ?>> All</label>
+              <label><input type="radio" name="stock_status" value="NonZero" <?= $f['stock_status']==='NonZero'?'checked':'' ?>> Without Zero Balance</label>
+              <label><input type="radio" name="stock_status" value="Positive" <?= $f['stock_status']==='Positive'?'checked':'' ?>> Only Positive</label>
+            </div>
+          </div>
+          <div class="opts-block">
+            <div class="ob-title">Stock Valuation On</div>
+            <div class="opts-radio-row">
+              <label><input type="radio" name="valuation_on" value="MRP" <?= $f['valuation_on']==='MRP'?'checked':'' ?>> MRP Rate</label>
+              <label><input type="radio" name="valuation_on" value="Purchase" <?= $f['valuation_on']==='Purchase'?'checked':'' ?>> Purchase Rate</label>
+              <label><input type="radio" name="valuation_on" value="StockRate" <?= $f['valuation_on']==='StockRate'?'checked':'' ?>> Stock Rate</label>
+              <label><input type="radio" name="valuation_on" value="None" <?= $f['valuation_on']==='None'?'checked':'' ?>> None</label>
+            </div>
+            <div class="rate-pair">
+              <span style="font-size:11px;">Rate Range From</span>
+              <input type="number" step="0.01" name="rate_from" value="<?= h($f['rate_from']) ?>" class="form-control form-control-sm">
+              <span style="font-size:11px;">To</span>
+              <input type="number" step="0.01" name="rate_to" value="<?= h($f['rate_to']) ?>" class="form-control form-control-sm">
+            </div>
+          </div>
         </div>
-        <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Reserved — wire when Local/Central column is confirmed</div>
+      </div>
+    </div>
+
+    <div class="date-cols">
+      <div class="ob-title">Columns</div>
+      <div class="opts-chk-col" style="max-height:none;">
+        <?php foreach ($colLabels as $key => $label): ?>
+          <label><input type="checkbox" name="cols[]" value="<?= h($key) ?>" <?= in_array($key, $activeCols, true) ? 'checked' : '' ?>> <?= h($label) ?></label>
+        <?php endforeach; ?>
       </div>
     </div>
   </div>
 </div>
 
-<!-- FILTER TABS -->
+<!-- ═══════════════ OTHER TABS (one each, like legacy) ═══════════════ -->
 <div class="tab-pane" id="tab-category">
   <div class="filter-card"><div class="fc-title">Category</div><div class="fg-row">
     <?php sih_renderMs('ms-cat','Category',$categories,'C_Code','C_Name','category',$f['category'],'All Categories'); ?>
@@ -631,9 +698,9 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
     <?php sih_renderMs('ms-cmp','Company',$companies,'Comp_Code','Comp_Name','company',$f['company'],'All Companies'); ?>
   </div></div>
 </div>
-<div class="tab-pane" id="tab-prodgroup">
-  <div class="filter-card"><div class="fc-title">Product Group</div><div class="fg-row">
-    <?php sih_renderMs('ms-pg','Product Group',$productGroups,'ProdGroup_Code','ProdGroup_Name','prod_group',$f['prod_group'],'All Groups'); ?>
+<div class="tab-pane" id="tab-size">
+  <div class="filter-card"><div class="fc-title">Size</div><div class="fg-row">
+    <?php sih_renderMs('ms-sz','Size',$sizes,'S_Code','S_Name','size',$f['size'],'All Sizes'); ?>
   </div></div>
 </div>
 <div class="tab-pane" id="tab-color">
@@ -646,23 +713,34 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
     <?php sih_renderMs('ms-desc','Description',$descriptions,'Des_Code','Des_Name','description',$f['description'],'All Descriptions'); ?>
   </div></div>
 </div>
+<div class="tab-pane" id="tab-sp1">
+  <div class="filter-card"><div class="fc-title">Sp Instruction1</div><div class="fg-row">
+    <?php sih_renderMs('ms-sp1','Sp Instruction1',$sp1List,'S_Code','S_Name','sp1',$f['sp1'],'All'); ?>
+  </div></div>
+</div>
+<div class="tab-pane" id="tab-sp2">
+  <div class="filter-card"><div class="fc-title">Sp Instruction2</div><div class="fg-row">
+    <?php sih_renderMs('ms-sp2','Sp Instruction2',$sp2List,'S_Code','S_Name','sp2',$f['sp2'],'All'); ?>
+  </div></div>
+</div>
+<div class="tab-pane" id="tab-sp3">
+  <div class="filter-card"><div class="fc-title">Sp Instruction3</div><div class="fg-row">
+    <?php sih_renderMs('ms-sp3','Sp Instruction3',$sp3List,'S_Code','S_Name','sp3',$f['sp3'],'All'); ?>
+  </div></div>
+</div>
 <div class="tab-pane" id="tab-compno">
-  <div class="filter-card"><div class="fc-title">Company No</div><div class="fg-row">
+  <div class="filter-card"><div class="fc-title">Company No.</div><div class="fg-row">
     <?php sih_renderMs('ms-cno','Company No',$companyNos,'Comp_No','Comp_No','company_no',$f['company_no'],'All'); ?>
   </div></div>
 </div>
-<div class="tab-pane" id="tab-size">
-  <div class="filter-card"><div class="fc-title">Size</div><div class="fg-row">
-    <?php sih_renderMs('ms-sz','Size',$sizes,'S_Code','S_Name','size',$f['size'],'All Sizes'); ?>
+<div class="tab-pane" id="tab-pcode">
+  <div class="filter-card"><div class="fc-title">Product Code</div><div class="fg-row">
+    <?php sih_renderMs('ms-pcode','Product Code',$productCodes,'Product_Code','Product_Code','product_code',$f['product_code'],'All Products'); ?>
   </div></div>
 </div>
-<div class="tab-pane" id="tab-spinst">
-  <div class="filter-card"><div class="fc-title">Special Instructions</div><div class="fg-row">
-    <?php
-      sih_renderMs('ms-sp1','Sp Inst 1',$sp1List,'S_Code','S_Name','sp1',$f['sp1'],'All');
-      sih_renderMs('ms-sp2','Sp Inst 2',$sp2List,'S_Code','S_Name','sp2',$f['sp2'],'All');
-      sih_renderMs('ms-sp3','Sp Inst 3',$sp3List,'S_Code','S_Name','sp3',$f['sp3'],'All');
-    ?>
+<div class="tab-pane" id="tab-cpc">
+  <div class="filter-card"><div class="fc-title">CompProdCode</div><div class="fg-row">
+    <?php sih_renderMs('ms-cpc','CompProdCode',$compProdCodes,'CompProdCode','CompProdCode','comp_prod_code',$f['comp_prod_code'],'All'); ?>
   </div></div>
 </div>
 <div class="tab-pane" id="tab-party">
@@ -670,17 +748,12 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
     <?php sih_renderMs('ms-party','Party',$parties,'Comp_Code','Comp_Name','party',$f['party'],'All'); ?>
   </div></div>
 </div>
-<div class="tab-pane" id="tab-city">
-  <div class="filter-card"><div class="fc-title">City</div><div class="fg-row">
-    <?php sih_renderMs('ms-city','City',$cities,'City_Code','City_Name','city',$f['city'],'All'); ?>
-  </div></div>
-</div>
-<div class="tab-pane" id="tab-product">
-  <div class="filter-card"><div class="fc-title">Product</div><div class="fg-row">
-    <?php
-      sih_renderMs('ms-pcode','Product Code',$productCodes,'Product_Code','Product_Code','product_code',$f['product_code'],'All Products');
-      sih_renderMs('ms-cpc','CompProdCode',$compProdCodes,'CompProdCode','CompProdCode','comp_prod_code',$f['comp_prod_code'],'All');
-    ?>
+<div class="tab-pane" id="tab-refno">
+  <div class="filter-card"><div class="fc-title">Ref. No.</div><div class="fg-row">
+    <div class="fg-col-ms" style="max-width:320px;">
+      <span class="fl">Ref. No. contains</span>
+      <input type="text" name="refno_contains" value="<?= h($f['refno_contains']) ?>" class="form-control form-control-sm" style="font-size:11.5px;">
+    </div>
   </div></div>
 </div>
 <div class="tab-pane" id="tab-tax">
@@ -688,15 +761,24 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
     <?php sih_renderMs('ms-tax','Tax %',$taxRates,'Tax','Tax','tax',$f['tax'],'All'); ?>
   </div></div>
 </div>
-<div class="tab-pane" id="tab-columns">
-  <div class="filter-card">
-    <div class="fc-title">Columns To Show</div>
-    <div class="opts-chk-col" style="max-height:none;flex-direction:row;flex-wrap:wrap;gap:10px 18px;">
-      <?php foreach ($colLabels as $key => $label): ?>
-        <label><input type="checkbox" name="cols[]" value="<?= h($key) ?>" <?= in_array($key, $activeCols, true) ? 'checked' : '' ?>> <?= h($label) ?></label>
-      <?php endforeach; ?>
+<div class="tab-pane" id="tab-city">
+  <div class="filter-card"><div class="fc-title">City</div><div class="fg-row">
+    <?php sih_renderMs('ms-city','City',$cities,'City_Code','City_Name','city',$f['city'],'All'); ?>
+  </div></div>
+</div>
+<div class="tab-pane" id="tab-type">
+  <div class="filter-card"><div class="fc-title">Type</div>
+    <div class="opts-radio-row">
+      <label><input type="radio" name="type_filter" value="All" <?= $f['type_filter']==='All'?'checked':'' ?>> All</label>
+      <label><input type="radio" name="type_filter" value="Local" <?= $f['type_filter']==='Local'?'checked':'' ?>> Local</label>
+      <label><input type="radio" name="type_filter" value="Central" <?= $f['type_filter']==='Central'?'checked':'' ?>> Central</label>
     </div>
   </div>
+</div>
+<div class="tab-pane" id="tab-prodgroup">
+  <div class="filter-card"><div class="fc-title">Product Group</div><div class="fg-row">
+    <?php sih_renderMs('ms-pg','Product Group',$productGroups,'ProdGroup_Code','ProdGroup_Name','prod_group',$f['prod_group'],'All Groups'); ?>
+  </div></div>
 </div>
 
 <div class="action-bar mb-4">
@@ -707,7 +789,7 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
   <div class="d-flex gap-2">
     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sihReset()">↺ Reset</button>
     <button type="button" class="btn btn-success btn-sm" onclick="sihWhatsApp()">WhatsApp</button>
-    <button type="submit" class="btn btn-primary btn-sm px-3">Print / Run Report</button>
+    <button type="submit" class="btn btn-primary btn-sm px-3">Print</button>
     <a href="../index.php" class="btn btn-dark btn-sm">Exit</a>
   </div>
 </div>
@@ -725,7 +807,7 @@ table.sr td.num, table.sr th.num { text-align:right; font-variant-numeric:tabula
   <?php if (empty($rows)): ?>
     <p class="text-center py-5 text-muted mb-0">No stock found for the selected filters.</p>
   <?php else: ?>
-    <?php sih_renderTree($tree, 0, $activeCols, $colField, $colLabels); ?>
+    <?php sih_renderTree($tree, 0, $activeCols, $colField, $colLabels, $activeSubtots); ?>
     <div class="grand-total-bar">Grand Total — Stock: <?= number_format($grandStock, 3) ?> &nbsp; Value: ₹<?= number_format($grandValue, 2) ?></div>
   <?php endif; ?>
 </div>
@@ -744,6 +826,7 @@ var SIH_TOTAL = {
   value: <?= json_encode(round($grandValue, 2)) ?>,
   asOn: <?= json_encode($f['as_on_date']) ?>
 };
+var GROUPING_OPTIONS = <?= isset($jsGroupingOptions) ? $jsGroupingOptions : '{}' ?>;
 
 function showSihTab(id) {
   document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
@@ -753,14 +836,46 @@ function showSihTab(id) {
   var btn = document.querySelector('.tab-btn[data-tab="'+id+'"]');
   if (btn) btn.classList.add('active');
 }
-function onSihGroupChange() {
-  var cleared = false;
+
+/* MIS-style grouping: cascade clear + "-wise Total?" when next level set */
+function refreshGroupCheckboxes() {
   for (var i = 1; i <= 6; i++) {
-    var el = document.getElementById('grp' + i);
-    if (!el) continue;
-    if (cleared) { el.value = ''; continue; }
-    if (el.value === '') cleared = true;
+    var chkDiv = document.getElementById('grp_chk_col_' + i);
+    if (!chkDiv) continue;
+    var nextVal = '';
+    if (i < 6) {
+      var nextEl = document.getElementById('group_sel_' + (i + 1));
+      nextVal = nextEl ? nextEl.value : '';
+    }
+    var show = (i < 6) && nextVal !== '';
+    chkDiv.classList.toggle('show', show);
+    if (!show) { var ck = document.getElementById('subtot_' + i); if (ck) ck.checked = false; }
+    if (show) {
+      var curEl = document.getElementById('group_sel_' + i);
+      var curVal = curEl ? curEl.value : '';
+      var lbl = curVal !== '' ? (GROUPING_OPTIONS[curVal] || curVal) : '—';
+      var lblEl = document.getElementById('subtot_lbl_' + i);
+      if (lblEl) lblEl.textContent = lbl + '-wise Total?';
+    }
   }
+}
+function onGroupChange(i) {
+  var curEl = document.getElementById('group_sel_' + i);
+  if (curEl && curEl.value === '') {
+    for (var j = i + 1; j <= 6; j++) {
+      var el = document.getElementById('group_sel_' + j);
+      if (el) el.value = '';
+      var ck = document.getElementById('subtot_' + j);
+      if (ck) ck.checked = false;
+    }
+  }
+  if (curEl && curEl.value !== '') {
+    for (var j = i + 1; j <= 6; j++) {
+      var el = document.getElementById('group_sel_' + j);
+      if (el && el.value === curEl.value) el.value = '';
+    }
+  }
+  refreshGroupCheckboxes();
 }
 
 function toggleMs(id) {
@@ -854,18 +969,27 @@ function sihOpenTemplate() {
       }
     });
     ['ms-cat','ms-cmp','ms-sz','ms-col','ms-desc','ms-pg','ms-cno','ms-sp1','ms-sp2','ms-sp3','ms-party','ms-city','ms-pcode','ms-cpc','ms-tax'].forEach(updateMsTrigger);
-    alert('Template loaded. Click Print / Run Report.');
+    refreshGroupCheckboxes();
+    alert('Template loaded. Click Print.');
   } catch (e) { alert('Invalid template.'); }
 }
 function sihReset() {
   document.getElementById('filterForm').reset();
+  for (var i=1;i<=6;i++) {
+    var el=document.getElementById('group_sel_'+i); if(el) el.value='';
+    var ck=document.getElementById('subtot_'+i); if(ck) ck.checked=false;
+  }
   document.querySelectorAll('.ms-item input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+  document.querySelectorAll('[name="cols[]"]').forEach(function(cb){ cb.checked=true; });
   ['ms-cat','ms-cmp','ms-sz','ms-col','ms-desc','ms-pg','ms-cno','ms-sp1','ms-sp2','ms-sp3','ms-party','ms-city','ms-pcode','ms-cpc','ms-tax'].forEach(updateMsTrigger);
+  refreshGroupCheckboxes();
 }
 function sihWhatsApp() {
   var msg = encodeURIComponent('Stock In Hand\nAs On: '+SIH_TOTAL.asOn+'\nItems: '+SIH_TOTAL.items+'\nStock: '+SIH_TOTAL.stock+'\nValue: '+SIH_TOTAL.value);
   window.open('https://wa.me/?text='+msg, '_blank');
 }
+
+(function(){ refreshGroupCheckboxes(); })();
 </script>
 
 <?php include '../includes/footer.php'; ?>
