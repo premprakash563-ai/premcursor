@@ -15,15 +15,16 @@ Phased delivery. Each phase is independently demoable.
 
 ---
 
-## Phase 1 — Catalog & Orders (MVP Admin/Employee)
-- `BS_Services` + required document templates
-- `BS_Orders` + application JSON + status dropdown + status history
-- Manual assign / reassign UI
-- Document upload with approve / reject / re-upload
-- Cases for support tickets
-- Employee ACL: only assigned orders
+## Phase 1 — Catalog & Orders (MVP Admin/Employee) ✅ in package 0.2.0
+- `BS_Services` + required document field
+- `BS_Orders` + application JSON + status dropdown + `BS_StatusHistory`
+- Manual assign / reassign (admin DetailView button + `action=reassign`)
+- Document approve / reject / re-upload (`BS_OrderDocuments` actions)
+- Cases for support tickets (native + ACL guide)
+- Employee ACL: Owner-only setup guide (`docs/phase1-acl-setup.md`)
+- Admin **Employee Workload** dashlet
 
-**Exit:** Admin creates order → assigns employee → employee updates status & docs.
+**Exit:** Admin creates order → auto/manual assign → employee updates status & docs.
 
 ---
 

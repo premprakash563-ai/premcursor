@@ -24,14 +24,15 @@ Client SRD implementation package for **Business Service CRM & Client Management
 
 ## Quick start
 
-1. Read [`docs/suitecrm-gap-analysis.md`](docs/suitecrm-gap-analysis.md) and [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md).
-2. Install SuiteCRM; deploy [`suitecrm-extension/`](suitecrm-extension/) per its README.
-3. Import `suitecrm-extension/install/schema.sql` + `seed_services.sql`.
-4. Merge `install/config_override.sample.php` into `config_override.php`.
-5. Run assignment tests:
+1. Read [`docs/suitecrm-gap-analysis.md`](docs/suitecrm-gap-analysis.md) and [`docs/phase1-acl-setup.md`](docs/phase1-acl-setup.md).
+2. Download / build zip `BS_BusinessServiceCRM-0.2.0.zip`.
+3. SuiteCRM 7.15.1 → Admin → **Module Loader** → Install → Quick Repair.
+4. Configure Employee role (Owner ACL) per Phase 1 guide.
+5. Run tests:
 
 ```bash
 php tests/AssignmentEngineLogicTest.php
+php tests/Phase1LogicTest.php
 ```
 
 ## Phase 1 focus (next build)

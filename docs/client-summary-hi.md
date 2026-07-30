@@ -27,10 +27,13 @@ SuiteCRM **admin + employee CRM** ke liye strong base hai. Client SRD ka custome
 
 Detail: `docs/implementation-roadmap.md`
 
-## Is PR me kya hai
+## Is PR / package me kya hai (v0.2.0 — Phase 1)
 
-- Poora SRD + gap analysis + architecture + data model
-- SuiteCRM extension scaffolding (`BS_Services`, `BS_Orders`, `BS_OrderDocuments`)
-- Assignment engine + notification service + SQL schema + sample services
-- Portal API OpenAPI contract
-- Assignment unit tests (pass)
+- Services / Orders / Order Documents / Status History modules
+- Auto-assignment (10/day) + admin reassign
+- Document Approve / Reject / Re-upload actions
+- Status history logging + Employee Workload dashlet
+- ACL setup guide: `docs/phase1-acl-setup.md`
+- Module Loader zip: `BS_BusinessServiceCRM-0.2.0.zip`
+
+Abhi nahi: customer portal, payments, live chat, full reports (Phase 3+)

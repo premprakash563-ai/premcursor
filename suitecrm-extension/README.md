@@ -51,7 +51,8 @@ Then: Admin → Module Loader → upload `BS_BusinessServiceCRM.zip` → Install
 ## Modules included
 
 - `BS_Services` — service catalog
-- `BS_Orders` — service orders / projects
-- `BS_OrderDocuments` — KYC/doc review
+- `BS_Orders` — service orders / projects (+ reassign action, workload dashlet)
+- `BS_OrderDocuments` — KYC/doc review (approve / reject / re-upload)
+- `BS_StatusHistory` — status timeline
 
-Schema also reserves: payments, invoices, chat, notifications, leave, assignment_log (see `install/schema.sql`).
+Also in package: auto-assignment engine, status hooks, notification service, SQL schema/seed.

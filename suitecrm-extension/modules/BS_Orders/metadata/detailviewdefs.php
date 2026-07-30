@@ -3,7 +3,16 @@
 $module_name = 'BS_Orders';
 $viewdefs[$module_name]['DetailView'] = [
     'templateMeta' => [
-        'form' => ['buttons' => ['EDIT', 'DUPLICATE', 'DELETE']],
+        'form' => [
+            'buttons' => [
+                'EDIT',
+                'DUPLICATE',
+                'DELETE',
+                [
+                    'customCode' => '{if $is_admin}<input type="button" class="button" value="Reassign…" onclick="var u=prompt(\'Enter Employee User ID to reassign:\'); if(u){ window.location.href=\'index.php?module=BS_Orders&action=reassign&record={$fields.id.value}&user_id=\'+encodeURIComponent(u);}">{/if}',
+                ],
+            ],
+        ],
         'maxColumns' => '2',
         'widths' => [
             ['label' => '10', 'field' => '30'],
