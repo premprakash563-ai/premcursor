@@ -1,53 +1,32 @@
-/* Business Service CRM — clean professional SuiteCRM UI polish
-   Palette: slate ink + teal accent. No purple / cream / heavy shadows. */
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+/* Business Service CRM — light UI polish (does NOT replace SuiteCRM theme) */
 
 :root {
   --bs-ink: #122033;
   --bs-muted: #5b6b7c;
   --bs-line: #d9e2ec;
-  --bs-bg: #f3f6f9;
-  --bs-panel: #ffffff;
   --bs-accent: #0f766e;
   --bs-accent-soft: #e6f4f2;
 }
 
-html body {
-  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif !important;
+/* Only soften fonts inside app shell — never strip core theme */
+#bootstrap-container,
+#content,
+.pagecontent {
+  font-family: "Segoe UI", system-ui, sans-serif;
   color: var(--bs-ink);
-  background: var(--bs-bg) !important;
 }
 
-/* Top navbar — quieter */
 .navbar-inverse,
-#bootstrap-container > .navbar,
-.headernav {
+#bootstrap-container > .navbar {
   background: #0f1c2b !important;
   border: 0 !important;
   box-shadow: none !important;
 }
 
-.navbar-inverse .nav > li > a,
-.headernav a {
-  font-weight: 500 !important;
-  letter-spacing: 0.01em;
-}
-
-/* Content frame */
-#content,
-#pagecontent,
-.pagecontent {
-  background: transparent !important;
-}
-
-/* List views — cleaner */
 .list.view,
 table.list.view {
   border: 1px solid var(--bs-line) !important;
   border-radius: 8px !important;
-  overflow: hidden;
-  background: var(--bs-panel) !important;
   box-shadow: none !important;
 }
 
@@ -58,30 +37,6 @@ table.list.view th {
   font-size: 11px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.04em !important;
-  font-weight: 600 !important;
-  border-bottom: 1px solid var(--bs-line) !important;
-}
-
-.list.view td,
-table.list.view td {
-  border-color: #edf1f5 !important;
-  font-size: 13px !important;
-}
-
-.list.view tr:hover td {
-  background: #f7fafc !important;
-}
-
-/* Buttons */
-input[type="submit"].button,
-input[type="button"].button,
-.btn,
-button.button,
-a.btn {
-  border-radius: 6px !important;
-  box-shadow: none !important;
-  font-weight: 600 !important;
-  border: 1px solid var(--bs-line) !important;
 }
 
 input[type="submit"].button.primary,
@@ -92,94 +47,18 @@ input#SAVE {
   background: var(--bs-accent) !important;
   border-color: var(--bs-accent) !important;
   color: #fff !important;
-}
-
-/* Detail / Edit panels */
-.panel-heading,
-.panel-default > .panel-heading,
-div[field] .label {
-  font-weight: 600;
-}
-
-.detail-view,
-.edit-view,
-#EditView,
-.detail.view {
-  background: var(--bs-panel);
-}
-
-td.tabDetailViewDF,
-td.tabDetailViewDL,
-.detail-view-row,
-.edit-view-row {
-  border-color: #edf1f5 !important;
-}
-
-/* Dashlets chrome */
-.dashletPanel,
-.hd.dashletPanel,
-.dashletcontainer .hd {
-  background: var(--bs-panel) !important;
-  border: 1px solid var(--bs-line) !important;
-  border-radius: 8px !important;
   box-shadow: none !important;
 }
 
-.dashletPanel .hd .title,
-.dashletcontainer .hd .title {
-  font-family: "IBM Plex Sans", sans-serif !important;
-  font-weight: 600 !important;
-  color: var(--bs-ink) !important;
-}
-
-.dashletNonTable,
-.dashletPanel .bd {
-  background: transparent !important;
-}
-
-/* Hide noisy module title bars slightly */
 .moduleTitle h2 {
-  font-family: "IBM Plex Sans", sans-serif !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em;
   color: var(--bs-ink) !important;
 }
 
-/* Footer quieter */
-#footer,
-.footer_right,
-.footer_left {
-  color: var(--bs-muted) !important;
-  font-size: 12px !important;
-}
-
-/* Forms */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-select,
-textarea {
-  border-radius: 6px !important;
-  border-color: var(--bs-line) !important;
+.dashletPanel,
+.hd.dashletPanel {
+  border: 1px solid var(--bs-line) !important;
+  border-radius: 8px !important;
   box-shadow: none !important;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--bs-accent) !important;
-  outline: none !important;
-}
-
-/* Sidebar / recent quieter if present */
-#sidebar_container,
-.sidebar {
-  background: transparent !important;
-}
-
-/* Action menus */
-.btn-group .btn,
-ul.clickMenu {
-  border-radius: 6px !important;
 }

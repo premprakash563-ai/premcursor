@@ -1,13 +1,13 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (Dashboard polish 0.3.2)
- * Theme CSS is inlined via hook (works even when /custom/themes URL is 404).
+ * Module Loader manifest — SuiteCRM 7.15.1 (0.3.3 recovery-safe theme)
+ * Does NOT write into core themes/SuiteP (avoids breaking login CSS).
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Clean professional dashboard + UI polish (inline theme CSS)',
-    'version' => '0.3.2',
+    'description' => 'Dashboard polish recovery-safe (no core theme overwrite)',
+    'version' => '0.3.3',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
@@ -40,7 +40,6 @@ $installdefs = array(
         array('from' => '<basepath>/lib/Documents', 'to' => 'custom/include/BS/Documents'),
         array('from' => '<basepath>/lib/Theme', 'to' => 'custom/include/BS/Theme'),
         array('from' => '<basepath>/custom/themes/SuiteP/css', 'to' => 'custom/themes/SuiteP/css'),
-        array('from' => '<basepath>/themes/SuiteP/css', 'to' => 'themes/SuiteP/css'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Include', 'to' => 'custom/Extension/application/Ext/Include'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Language', 'to' => 'custom/Extension/application/Ext/Language'),
         array('from' => '<basepath>/custom/Extension/application/Ext/LogicHooks', 'to' => 'custom/Extension/application/Ext/LogicHooks'),

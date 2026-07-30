@@ -11,6 +11,7 @@ zip -r "$OUT" \
   modules \
   lib \
   custom \
+  themes \
   install \
   scripts \
   -x '*.DS_Store*'
