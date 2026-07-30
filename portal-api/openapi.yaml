@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Business Service CRM — Customer Portal API
+  version: 0.1.0
+  description: >
+    REST contract for the customer portal and public website booking flow.
+    Backed by SuiteCRM custom modules (BS_*) and portal auth (Contact-linked).
+servers:
+  - url: https://crm.example.com/portal/api/v1
+tags:
+  - name: Auth
+  - name: Services
+  - name: Orders
+  - name: Documents
+  - name: Chat
+  - name: Payments
+  - name: Tickets
+  - name: Profile
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register customer (creates Contact + Account)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, mobile, email, password]
+              properties:
+                name: { type: string }
+                mobile: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                gstin: { type: string }
+                pan: { type: string }
+      responses:
+        '201':
+          description: Registered; OTP sent
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/mobile + password
+      responses:
+        '200':
+          description: JWT / session token
+  /auth/otp/request:
+    post:
+      tags: [Auth]
+      summary: Request OTP
+      responses:
+        '200':
+          description: OTP dispatched
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Verify OTP
+      responses:
+        '200':
+          description: Verified
+  /services:
+    get:
+      tags: [Services]
+      summary: List active services (public)
+      responses:
+        '200':
+          description: Service catalog
+  /services/{id}:
+    get:
+      tags: [Services]
+      summary: Service detail + required documents + price
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Service detail
+  /orders:
+    get:
+      tags: [Orders]
+      summary: List my orders
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Orders
+    post:
+      tags: [Orders]
+      summary: Book service (application + optional docs meta)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [service_id, application]
+              properties:
+                service_id: { type: string }
+                application: { type: object }
+                pan: { type: string }
+                gstin: { type: string }
+                pay_now: { type: boolean, default: false }
+      responses:
+        '201':
+          description: Order created; employee auto-assigned when possible
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Order detail + status timeline
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Order
+  /orders/{id}/documents:
+    get:
+      tags: [Documents]
+      summary: List documents for order
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Documents
+    post:
+      tags: [Documents]
+      summary: Upload document
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                doc_code: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Uploaded
+  /orders/{id}/invoice:
+    get:
+      tags: [Orders]
+      summary: Download invoice PDF
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: PDF
+  /orders/{id}/chat/messages:
+    get:
+      tags: [Chat]
+      summary: Chat history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Messages
+    post:
+      tags: [Chat]
+      summary: Send chat message
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Sent
+  /payments/create:
+    post:
+      tags: [Payments]
+      summary: Create gateway payment session (Razorpay order)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Gateway payload
+  /payments/webhook/{gateway}:
+    post:
+      tags: [Payments]
+      summary: Payment webhook
+      parameters:
+        - in: path
+          name: gateway
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+  /tickets:
+    get:
+      tags: [Tickets]
+      summary: My support tickets (Cases)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Tickets
+    post:
+      tags: [Tickets]
+      summary: Create support ticket
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /profile:
+    get:
+      tags: [Profile]
+      summary: My profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Profile
+    patch:
+      tags: [Profile]
+      summary: Update profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Updated
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
