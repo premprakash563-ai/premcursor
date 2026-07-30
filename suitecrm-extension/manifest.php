@@ -1,12 +1,12 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (Phase 2)
+ * Module Loader manifest — SuiteCRM 7.15.1 (Dashboard polish 0.3.1)
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Phase 2: Leave, Notifications, document reminders, idle escalation',
-    'version' => '0.3.0',
+    'description' => 'Clean professional dashboard + SuiteCRM UI polish (Phase 2.5)',
+    'version' => '0.3.1',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
@@ -32,12 +32,16 @@ $installdefs = array(
         array('from' => '<basepath>/modules/BS_StatusHistory', 'to' => 'modules/BS_StatusHistory'),
         array('from' => '<basepath>/modules/BS_Leave', 'to' => 'modules/BS_Leave'),
         array('from' => '<basepath>/modules/BS_Notifications', 'to' => 'modules/BS_Notifications'),
+        array('from' => '<basepath>/modules/Home/Dashlets/BS_AdminDashboardDashlet', 'to' => 'modules/Home/Dashlets/BS_AdminDashboardDashlet'),
         array('from' => '<basepath>/lib/Assignment', 'to' => 'custom/include/BS/Assignment'),
         array('from' => '<basepath>/lib/Notifications', 'to' => 'custom/include/BS/Notifications'),
         array('from' => '<basepath>/lib/Orders', 'to' => 'custom/include/BS/Orders'),
         array('from' => '<basepath>/lib/Documents', 'to' => 'custom/include/BS/Documents'),
+        array('from' => '<basepath>/lib/Theme', 'to' => 'custom/include/BS/Theme'),
+        array('from' => '<basepath>/custom/themes/SuiteP/css', 'to' => 'custom/themes/SuiteP/css'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Include', 'to' => 'custom/Extension/application/Ext/Include'),
         array('from' => '<basepath>/custom/Extension/application/Ext/Language', 'to' => 'custom/Extension/application/Ext/Language'),
+        array('from' => '<basepath>/custom/Extension/application/Ext/LogicHooks', 'to' => 'custom/Extension/application/Ext/LogicHooks'),
         array('from' => '<basepath>/custom/Extension/modules/BS_Orders', 'to' => 'custom/Extension/modules/BS_Orders'),
         array('from' => '<basepath>/custom/Extension/modules/Users', 'to' => 'custom/Extension/modules/Users'),
         array('from' => '<basepath>/custom/Extension/modules/Schedulers', 'to' => 'custom/Extension/modules/Schedulers'),
