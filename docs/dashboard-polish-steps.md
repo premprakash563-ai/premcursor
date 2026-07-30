@@ -1,38 +1,35 @@
-# Dashboard polish — install steps (Git nahi chahiye)
+# Dashboard polish 0.3.2 — install steps
 
-Client request: CRM dashboard professional, simple, clean.
+404 on CSS URL normal ho sakta hai (hosting `custom/themes` block karti hai).
+Is version me CSS **page ke andar inline** load hoti hai — direct URL ki zaroorat nahi.
 
-## 1) Zip download
-https://github.com/premprakash563-ai/premcursor/raw/cursor/suitecrm-business-service-crm-8700/BS_BusinessServiceCRM-0.3.1.zip
+## 1) Download
+https://github.com/premprakash563-ai/premcursor/raw/cursor/suitecrm-business-service-crm-8700/BS_BusinessServiceCRM-0.3.2.zip
 
 ## 2) Install
-1. Admin → **Module Loader**
-2. Zip upload → **Install**
-3. Admin → **Repair** → **Quick Repair and Rebuild**
-4. SQL dikhe to **Execute mat dabao** (403 aa sakta hai) — skip
-5. Logout → Login
+1. Admin → **Module Loader** → Upload zip → **Install**
+2. Admin → **Repair** → **Quick Repair and Rebuild**
+3. Execute skip (403 avoid)
+4. Logout → Login
 
-## 3) Cache clear (agar look change na dikhe)
-File Manager me delete files inside:
-- `cache/themes/`
-- `cache/smarty/templates_c/`
-- `cache/modules/Home/` (agar ho)
+## 3) File Manager se confirm (optional)
+Ye file honi chahiye:
+`custom/include/BS/Theme/BS_ThemeHook.php`
+`custom/include/BS/Theme/bs-professional.css`
+`modules/Home/Dashlets/BS_AdminDashboardDashlet/BS_AdminDashboardDashlet.php`
 
-## 4) Home pe naya dashboard lagao
-1. Upar **HOME** pe jao
-2. **Add Dashlets** / dashboard tools (page top pe)
-3. Dashlet list me **Business Service Overview** select karo → Add
-4. Optional: **Employee Workload** bhi add karo
-5. Purane noisy dashlets (My Activity etc.) hata do — simple rakho
+## 4) Home dashlet
+1. **HOME**
+2. **Add Dashlets**
+3. **Business Service Overview** add karo
+4. Extra dashlets hatao
 
-## 5) Result
-- Teal + slate clean look (poori CRM UI)
-- Home pe: Today / Pending / Month revenue / Online team
-- Pipeline + latest orders
-- Quick buttons: New order, Services, Notifications, Leave
+## 5) Look check
+- Navbar dark slate
+- Buttons teal
+- List views clean
+- Overview dashlet professional
 
-## Agar CSS na aaye
-Seedha check:
-`https://yoogleconsultancy.in/custom/themes/SuiteP/css/bs-professional.css`
+Hard refresh: `Ctrl+F5`
 
-Agar 404 → Module Loader install incomplete. Dubara Install + Quick Repair.
+CSS URL 404 ignore karo — ab zaroori nahi.
