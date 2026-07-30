@@ -3,9 +3,10 @@
 Copy the contents of this `lib/` folder into SuiteCRM as:
 
 ```text
-{suitecrm}/custom/include/BS/Assignment/BS_AssignmentEngine.php
-{suitecrm}/custom/include/BS/Assignment/BS_OrderAssignmentHook.php
-{suitecrm}/custom/include/BS/Notifications/BS_NotificationService.php
+{suitecrm}/custom/include/BS/Assignment/...
+{suitecrm}/custom/include/BS/Notifications/...
+{suitecrm}/custom/include/BS/Orders/...
+{suitecrm}/custom/include/BS/Documents/...
 ```
 
-Logic hooks under `custom/Extension/` already reference these paths.
+Module Loader `manifest.php` already maps these paths.

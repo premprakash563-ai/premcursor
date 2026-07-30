@@ -1,17 +1,12 @@
 <?php
 /**
- * Module Loader manifest — SuiteCRM 7.15.1 (Phase 1: Catalog & Orders MVP)
- *
- * IMPORTANT:
- * - acceptable_sugar_versions → $sugar_version (6.5.25 on SuiteCRM 7.15.1)
- * - acceptable_suitecrm_versions → $suitecrm_version (7.15.1)
- * Install via Admin → Developer Tools → Module Loader (NOT Upgrade Wizard).
+ * Module Loader manifest — SuiteCRM 7.15.1 (Phase 1 + Services tab fix)
  */
 
 $manifest = array(
     'name' => 'Business Service CRM (BS)',
-    'description' => 'Phase 1: Services, Orders, Documents, Status History, auto-assign, workload dashlet',
-    'version' => '0.2.0',
+    'description' => 'Phase 1 + enable Services/Orders tabs in navigation',
+    'version' => '0.2.1',
     'author' => 'Prem Cursor',
     'acceptable_sugar_versions' => array(
         'exact_matches' => array('6.5.25'),
@@ -43,5 +38,8 @@ $installdefs = array(
         array('from' => '<basepath>/custom/Extension/application/Ext/Language', 'to' => 'custom/Extension/application/Ext/Language'),
         array('from' => '<basepath>/custom/Extension/modules/BS_Orders', 'to' => 'custom/Extension/modules/BS_Orders'),
         array('from' => '<basepath>/custom/Extension/modules/Users', 'to' => 'custom/Extension/modules/Users'),
+    ),
+    'post_execute' => array(
+        '<basepath>/scripts/post_install.php',
     ),
 );
