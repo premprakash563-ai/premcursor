@@ -21,8 +21,20 @@ class BS_AdminDashboardDashlet extends Dashlet
 
     public function display($text = '')
     {
-        $stats = $this->collectStats();
-        $recent = $this->recentOrders(6);
+        // Never let dashlet PHP/SQL errors break Home AJAX (infinite spinner).
+        try {
+            $stats = $this->collectStats();
+            $recent = $this->recentOrders(6);
+        } catch (Throwable $e) {
+            $msg = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+            return parent::display(
+                '<div style="padding:16px;font-family:system-ui,sans-serif">'
+                . '<p><strong>Business Service Overview</strong> could not load stats.</p>'
+                . '<p style="color:#5b6b7c;font-size:13px">' . $msg . '</p>'
+                . '<p><a href="index.php?entryPoint=bs_operations_board">Open Operations Board</a></p>'
+                . '</div>'
+            );
+        }
 
         $html = $this->styles();
         $html .= '<div class="bs-dash">';
@@ -30,6 +42,7 @@ class BS_AdminDashboardDashlet extends Dashlet
         $html .= '<p class="bs-dash__eyebrow">Operations</p>';
         $html .= '<h2 class="bs-dash__title">Business Service Overview</h2>';
         $html .= '<p class="bs-dash__sub">Today\'s workload, pipeline health, and latest orders — keep this board clean and act from here.</p>';
+        $html .= '<p class="bs-dash__sub"><a href="index.php?entryPoint=bs_operations_board">Open full Operations Board →</a></p>';
         $html .= '</div>';
 
         $html .= '<div class="bs-dash__kpis">';
@@ -69,10 +82,10 @@ class BS_AdminDashboardDashlet extends Dashlet
         $html .= '</section></div>';
 
         $html .= '<div class="bs-dash__actions">';
-        $html .= '<a class="bs-dash__btn bs-dash__btn--primary" href="index.php?module=BS_Orders&action=EditView">New order</a>';
+        $html .= '<a class="bs-dash__btn bs-dash__btn--primary" href="index.php?entryPoint=bs_operations_board">Operations Board</a>';
+        $html .= '<a class="bs-dash__btn" href="index.php?module=BS_Orders&action=EditView">New order</a>';
         $html .= '<a class="bs-dash__btn" href="index.php?module=BS_Services&action=index">Services</a>';
         $html .= '<a class="bs-dash__btn" href="index.php?module=BS_Notifications&action=index">Notifications</a>';
-        $html .= '<a class="bs-dash__btn" href="index.php?module=BS_Leave&action=index">Leave</a>';
         $html .= '</div>';
 
         $html .= '</div>';
