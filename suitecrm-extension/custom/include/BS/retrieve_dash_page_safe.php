@@ -8,15 +8,13 @@ if (!defined('sugarEntry') || !sugarEntry) {
     die('Not A Valid Entry Point');
 }
 
-$bsLog = 'cache/bs_retrieve_dash_error.log';
-if (!is_dir('cache')) {
-    @mkdir('cache', 0755, true);
-}
-
 function bs_dash_log($msg)
 {
-    global $bsLog;
-    @file_put_contents($bsLog, date('c') . ' ' . $msg . "\n", FILE_APPEND);
+    $file = 'cache/bs_retrieve_dash_error.log';
+    if (!is_dir('cache')) {
+        @mkdir('cache', 0755, true);
+    }
+    @file_put_contents($file, date('c') . ' ' . $msg . "\n", FILE_APPEND);
 }
 
 function bs_disable_custom_dashlets()

@@ -1,31 +1,23 @@
 <?php
 /**
  * Standalone Home dashboard fix — NO entryPoint needed.
- * Upload/copy to public_html/bs_fix.php then open:
- *   https://yoogleconsultancy.in/bs_fix.php
+ * Open: https://yoogleconsultancy.in/bs_fix.php
  * Delete after use.
  */
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-ini_set('log_errors', '1');
-
 header('Content-Type: text/plain; charset=UTF-8');
-echo "BS FIX start\n";
+echo "BS FIX start v2\n";
 
-$bsFixLogDir = __DIR__ . '/cache';
-if (!is_dir($bsFixLogDir)) {
-    @mkdir($bsFixLogDir, 0755, true);
-}
-// IMPORTANT: do not use $log — SuiteCRM sets global $log = LoggerManager
-$bs_fix_log_file = $bsFixLogDir . '/bs_fix_standalone.log';
 function slog($m)
 {
-    global $bs_fix_log_file;
-    $line = date('c') . ' ' . $m . "\n";
-    if (is_string($bs_fix_log_file) && $bs_fix_log_file !== '') {
-        @file_put_contents($bs_fix_log_file, $line, FILE_APPEND);
+    // Never use global $log — SuiteCRM overwrites it with LoggerManager
+    $file = __DIR__ . '/cache/bs_fix_standalone.log';
+    if (!is_dir(__DIR__ . '/cache')) {
+        @mkdir(__DIR__ . '/cache', 0755, true);
     }
+    @file_put_contents($file, date('c') . ' ' . $m . "\n", FILE_APPEND);
     echo $m . "\n";
 }
 
@@ -34,20 +26,16 @@ try {
         define('sugarEntry', true);
     }
     require_once 'include/entryPoint.php';
-    // Re-assert our log path after SuiteCRM bootstrap clobbers $log
-    $bs_fix_log_file = __DIR__ . '/cache/bs_fix_standalone.log';
     slog('bootstrap OK');
 
     global $current_user, $db;
 
-    // Remove broken registry override
     $legacy = 'custom/include/MVC/Controller/entry_point_registry.php';
     if (is_file($legacy)) {
         rename($legacy, $legacy . '.bak.' . time());
         slog('removed custom entry_point_registry.php');
     }
 
-    // Disable custom dashlets
     foreach ([
         'modules/Home/Dashlets/BS_AdminDashboardDashlet/BS_AdminDashboardDashlet.php',
         'modules/BS_Orders/Dashlets/BS_EmployeeWorkloadDashlet/BS_EmployeeWorkloadDashlet.php',
@@ -58,13 +46,8 @@ try {
         }
     }
 
-    // Install safe retrieve_dash_page override + registry
     $safeSrc = 'custom/include/BS/retrieve_dash_page_safe.php';
-    if (!is_file($safeSrc)) {
-        slog("MISSING $safeSrc — copy from package first");
-    } else {
-        slog("safe wrapper present: $safeSrc");
-    }
+    slog(is_file($safeSrc) ? "safe wrapper present: $safeSrc" : "MISSING $safeSrc");
 
     $extDir = 'custom/application/Ext/EntryPointRegistry';
     if (!is_dir($extDir)) {
@@ -84,7 +67,9 @@ try {
     $lines = [];
     $skip = false;
     foreach (explode("\n", $text) as $line) {
-        if (strpos($line, 'retrieve_dash_page') !== false || strpos($line, 'bs_operations_board') !== false || strpos($line, 'bs_dash_fix') !== false) {
+        if (strpos($line, 'retrieve_dash_page') !== false
+            || strpos($line, 'bs_operations_board') !== false
+            || strpos($line, 'bs_dash_fix') !== false) {
             $skip = true;
             continue;
         }
@@ -94,7 +79,6 @@ try {
             }
             continue;
         }
-        // drop orphan debris
         if (strpos($line, "dashboard_board.php") !== false && strpos($line, "'file'") !== false) {
             continue;
         }
@@ -108,7 +92,6 @@ try {
     file_put_contents($ext, $body);
     slog("wrote $ext");
 
-    // Also extension source
     if (!is_dir('custom/Extension/application/Ext/EntryPointRegistry')) {
         mkdir('custom/Extension/application/Ext/EntryPointRegistry', 0755, true);
     }
@@ -117,7 +100,6 @@ try {
         "<?php\n" . $snippet
     );
 
-    // Reset ALL users' Home prefs (nuclear)
     $db->query("DELETE FROM user_preferences WHERE category = 'Home' AND deleted = 0");
     slog('deleted ALL Home user_preferences');
 
@@ -128,14 +110,9 @@ try {
         slog('not logged in via session — SQL reset still applied');
     }
 
-    // Clear caches
     @unlink('cache/dashlets/dashlets.php');
     foreach (glob('cache/dashlets/*') ?: [] as $f) {
         @unlink($f);
-    }
-    // controller mapping cache
-    if (function_exists('sugar_cache_clear')) {
-        // best-effort
     }
     slog('cleared dashlet cache files');
 
@@ -145,8 +122,7 @@ try {
     slog('rebuilt dashlet cache');
 
     slog('DONE');
-    slog('Next: open Home (Ctrl+Shift+R). Then delete this file: bs_fix.php');
-    slog('Log also at: cache/bs_fix_standalone.log');
+    slog('Next: open Home (Ctrl+Shift+R). Then delete bs_fix.php');
 } catch (Throwable $e) {
     slog('FATAL: ' . $e->getMessage());
     slog($e->getFile() . ':' . $e->getLine());
