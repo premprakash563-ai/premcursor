@@ -1,0 +1,64 @@
+/* Business Service CRM — light UI polish (does NOT replace SuiteCRM theme) */
+
+:root {
+  --bs-ink: #122033;
+  --bs-muted: #5b6b7c;
+  --bs-line: #d9e2ec;
+  --bs-accent: #0f766e;
+  --bs-accent-soft: #e6f4f2;
+}
+
+/* Only soften fonts inside app shell — never strip core theme */
+#bootstrap-container,
+#content,
+.pagecontent {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--bs-ink);
+}
+
+.navbar-inverse,
+#bootstrap-container > .navbar {
+  background: #0f1c2b !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.list.view,
+table.list.view {
+  border: 1px solid var(--bs-line) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.list.view th,
+table.list.view th {
+  background: #eef2f6 !important;
+  color: var(--bs-muted) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+input[type="submit"].button.primary,
+.btn-primary,
+#SAVE_HEADER,
+#SAVE_FOOTER,
+input#SAVE {
+  background: var(--bs-accent) !important;
+  border-color: var(--bs-accent) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.moduleTitle h2 {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  color: var(--bs-ink) !important;
+}
+
+.dashletPanel,
+.hd.dashletPanel {
+  border: 1px solid var(--bs-line) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
