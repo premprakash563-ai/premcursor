@@ -1,26 +1,14 @@
-# Home dashboard spinner atka — turant fix
+# Home spinner + console: retrieve_dash_page → 500
 
-Classic SuiteCRM Home pe dashlets load nahi ho rahe (grey dots).
+Matlab dashboard AJAX crash ho rahi hai.
 
-## Option A — 2 minute UI fix (pehle ye try karo)
+## Turant fix (SSH)
 
-1. Home page pe **ACTIONS** (pink button) click
-2. Agar dikhe: **Reset Dashboard** / **Reset to default homepage** → click
-3. Logout → Login
-4. Ctrl+Shift+R (hard refresh)
-
-Agar ACTIONS me Reset na mile → Option B.
-
-## Option B — SSH + phpMyAdmin (reliable)
-
-### 1) SSH
 ```bash
 cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/scripts/fix-home-dashboard.sh | bash
 ```
 
-### 2) phpMyAdmin
-File banegi: `~/public_html/bs_reset_home_dashlets.sql`  
-Usme ye SQL chalao (apna CRM database select karke):
+## Phir phpMyAdmin SQL
 
 ```sql
 DELETE FROM user_preferences
@@ -28,21 +16,25 @@ WHERE category = 'Home'
   AND deleted = 0;
 ```
 
-### 3) Browser
-Logout → Login → Home  
-ACTIONS → **Add Dashlets** se chahiye wale dashlets add karo.
+## Browser
 
-## Client ko kya dikhana hai
+1. Logout → Login  
+2. Ctrl+Shift+R  
+3. F12 → Network → `retrieve_dash_page` ab **200** hona chahiye (500 nahi)
+
+## Ye script kya karti hai
+
+- Broken `custom/include/MVC/Controller/entry_point_registry.php` hataati hai  
+- Entry point registry clean rewrite  
+- Custom BS dashlets temporarily disable  
+- Dashlet/cache clear  
+- Home prefs reset SQL generate
+
+## Client demo
 
 Classic Home stock SuiteCRM hai.  
-Client demo ke liye **Operations Board** use karo:
+Custom look ke liye Operations Board:
 
 ```
 https://yoogleconsultancy.in/index.php?entryPoint=bs_operations_board
 ```
-
-(Pehle board deploy confirm karo — alag steps `operations-board-steps.md`)
-
-## Note
-Custom `BS_AdminDashboardDashlet` temporarily `.off` ho sakta hai — ye Home AJAX hang rokne ke liye hai.  
-Operations Board alag page hai, uspe depend karo.

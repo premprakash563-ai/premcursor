@@ -30,40 +30,56 @@ curl -fsSL "$REPO_RAW/modules/BS_Dashboard/BoardRenderer.php" -o modules/BS_Dash
 curl -fsSL "$REPO_RAW/modules/BS_Dashboard/controller.php" -o modules/BS_Dashboard/controller.php || true
 
 echo "==> Registering entry point (Repair NOT required)..."
-REG_SNIPPET="<?php
-\$entry_point_registry['bs_operations_board'] = array(
+# Extension source
+cat > custom/Extension/application/Ext/EntryPointRegistry/bs_dashboard.php << 'EOF'
+<?php
+$entry_point_registry['bs_operations_board'] = array(
     'file' => 'custom/include/BS/dashboard_board.php',
     'auth' => true,
 );
-"
+EOF
 
-# Extension source (for future Quick Repair)
-printf '%s\n' "$REG_SNIPPET" > custom/Extension/application/Ext/EntryPointRegistry/bs_dashboard.php
+# Merged ext file — clean rewrite of our key only (no grep debris)
+python3 - << 'PY'
+from pathlib import Path
+ext = Path("custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php")
+text = ext.read_text() if ext.exists() else "<?php\n"
+lines = []
+skip_block = False
+for line in text.splitlines():
+    if "bs_operations_board" in line:
+        skip_block = True
+        continue
+    if skip_block:
+        if line.strip() in (");", ");?>"):
+            skip_block = False
+        continue
+    # drop orphaned debris from older grep-based deploys
+    s = line.strip()
+    if s.startswith("'file' => 'custom/include/BS/dashboard_board.php'"):
+        continue
+    lines.append(line)
+body = "\n".join(lines).strip()
+if not body.startswith("<?php"):
+    body = "<?php\n" + body
+body = body.rstrip() + "\n\n"
+body += "$entry_point_registry['bs_operations_board'] = array(\n"
+body += "    'file' => 'custom/include/BS/dashboard_board.php',\n"
+body += "    'auth' => true,\n"
+body += ");\n"
+ext.parent.mkdir(parents=True, exist_ok=True)
+ext.write_text(body)
+print("Wrote", ext)
+PY
 
-# Merged ext file SuiteCRM actually loads
-EXT_FILE="custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php"
-mkdir -p "$(dirname "$EXT_FILE")"
-if [ -f "$EXT_FILE" ]; then
-  # Remove any previous bs_operations_board block, then append fresh
-  grep -v "bs_operations_board" "$EXT_FILE" > "${EXT_FILE}.tmp" || true
-  mv "${EXT_FILE}.tmp" "$EXT_FILE"
-  printf '%s\n' "$REG_SNIPPET" >> "$EXT_FILE"
-else
-  printf '%s\n' "$REG_SNIPPET" > "$EXT_FILE"
+# NEVER create custom/include/MVC/Controller/entry_point_registry.php
+# A bad grep/append there can syntax-break ALL entry points (incl. retrieve_dash_page).
+if [ -f custom/include/MVC/Controller/entry_point_registry.php ]; then
+  mv -f custom/include/MVC/Controller/entry_point_registry.php \
+        custom/include/MVC/Controller/entry_point_registry.php.bak.$(date +%s)
+  echo "Removed dangerous custom entry_point_registry.php override"
 fi
-
-# Also write standalone .ext.php (some hosts load all files in folder)
-printf '%s\n' "$REG_SNIPPET" > custom/application/Ext/EntryPointRegistry/bs_operations_board.ext.php
-
-# Legacy fallback registry (loaded by older Sugar paths)
-LEGACY="custom/include/MVC/Controller/entry_point_registry.php"
-if [ -f include/MVC/Controller/entry_point_registry.php ]; then
-  cp -f include/MVC/Controller/entry_point_registry.php "$LEGACY"
-  # Strip previous custom lines then append
-  grep -v "bs_operations_board" "$LEGACY" > "${LEGACY}.tmp" || true
-  mv "${LEGACY}.tmp" "$LEGACY"
-  printf '%s\n' "$REG_SNIPPET" >> "$LEGACY"
-fi
+rm -f custom/application/Ext/EntryPointRegistry/bs_operations_board.ext.php
 
 # Verify board file has the fix marker (must be 0.4.3 self-contained)
 if ! grep -q "Custom Operations Board (0.4.3)" custom/include/BS/dashboard_board.php; then
