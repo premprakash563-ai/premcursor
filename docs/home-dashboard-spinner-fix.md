@@ -1,40 +1,35 @@
-# Home spinner + console: retrieve_dash_page → 500
+# retrieve_dash_page 500 — exact error nikaalo
 
-Matlab dashboard AJAX crash ho rahi hai.
+Console me sirf 500 dikhta hai. Exact PHP error chahiye.
 
-## Turant fix (SSH)
+## 1) SSH (ek command)
 
 ```bash
-cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/scripts/fix-home-dashboard.sh | bash
+cd ~/public_html && curl -fsSL https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/scripts/install-dash-fix.sh | bash
 ```
 
-## Phir phpMyAdmin SQL
-
-```sql
-DELETE FROM user_preferences
-WHERE category = 'Home'
-  AND deleted = 0;
-```
-
-## Browser
-
-1. Logout → Login  
-2. Ctrl+Shift+R  
-3. F12 → Network → `retrieve_dash_page` ab **200** hona chahiye (500 nahi)
-
-## Ye script kya karti hai
-
-- Broken `custom/include/MVC/Controller/entry_point_registry.php` hataati hai  
-- Entry point registry clean rewrite  
-- Custom BS dashlets temporarily disable  
-- Dashlet/cache clear  
-- Home prefs reset SQL generate
-
-## Client demo
-
-Classic Home stock SuiteCRM hai.  
-Custom look ke liye Operations Board:
+## 2) Browser (logged in)
 
 ```
-https://yoogleconsultancy.in/index.php?entryPoint=bs_operations_board
+https://yoogleconsultancy.in/index.php?entryPoint=bs_dash_fix
+```
+
+Black/green page aayegi — **poora text copy** karke bhejo.
+
+Ye page:
+- broken registry override hataati hai
+- custom dashlets disable
+- Home prefs reset (isi user ke)
+- dashlet cache rebuild
+- crash reason print karti hai
+
+## 3) Phir Home
+
+Ctrl+Shift+R → spinner hatna chahiye.
+
+## 4) Cleanup (baad me)
+
+```bash
+rm -f ~/public_html/custom/include/BS/bs_dash_fix.php
+rm -f ~/public_html/custom/Extension/application/Ext/EntryPointRegistry/bs_dash_fix.php
 ```
