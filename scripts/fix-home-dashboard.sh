@@ -1,123 +1,118 @@
 #!/usr/bin/env bash
-# Fix: Home dashboard spinner — console shows retrieve_dash_page → HTTP 500
-# Run: bash fix-home-dashboard.sh
+# Nuclear Home dashboard fix for retrieve_dash_page HTTP 500
+# Embeds files (no CDN dependency for critical PHP).
 set -euo pipefail
 BASE="${1:-$HOME/public_html}"
+COMMIT="${BS_FIX_COMMIT:-0f8c7c8}"
 cd "$BASE"
 
-echo "==> 1) Remove broken custom entry_point_registry override (common 500 cause)"
-if [ -f custom/include/MVC/Controller/entry_point_registry.php ]; then
-  mv -f custom/include/MVC/Controller/entry_point_registry.php \
-        custom/include/MVC/Controller/entry_point_registry.php.bak.$(date +%s)
-  echo "    Moved custom entry_point_registry.php out of the way"
-fi
-
-echo "==> 2) Rewrite clean EntryPointRegistry ext (only bs_operations_board add)"
+mkdir -p custom/include/BS
 mkdir -p custom/Extension/application/Ext/EntryPointRegistry
 mkdir -p custom/application/Ext/EntryPointRegistry
+mkdir -p cache
 
-# Extension source
-cat > custom/Extension/application/Ext/EntryPointRegistry/bs_dashboard.php << 'EOF'
-<?php
-$entry_point_registry['bs_operations_board'] = array(
-    'file' => 'custom/include/BS/dashboard_board.php',
-    'auth' => true,
-);
-EOF
+echo "==> Fetch safe wrapper + standalone fixer..."
+# Try commit-pinned raw; fallback to API
+fetch() {
+  local rel="$1" dest="$2"
+  local url="https://raw.githubusercontent.com/premprakash563-ai/premcursor/cursor/suitecrm-business-service-crm-8700/${rel}"
+  if curl -fsSL "$url" -o "$dest"; then
+    return 0
+  fi
+  local api="https://api.github.com/repos/premprakash563-ai/premcursor/contents/${rel}?ref=cursor/suitecrm-business-service-crm-8700"
+  curl -fsSL "$api" | php -r '
+    $j=json_decode(stream_get_contents(STDIN),true);
+    if(empty($j["content"])){fwrite(STDERR,"fail\n");exit(1);}
+    file_put_contents($argv[1], base64_decode($j["content"]));
+  ' "$dest"
+}
 
-# Merged file SuiteCRM loads — KEEP other entries if present, strip broken leftovers
-EXT="custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php"
+fetch "suitecrm-extension/custom/include/BS/retrieve_dash_page_safe.php" "custom/include/BS/retrieve_dash_page_safe.php"
+fetch "suitecrm-extension/custom/include/BS/bs_fix_standalone.php" "bs_fix.php"
+
+# Also try board file if missing
+if [ ! -f custom/include/BS/dashboard_board.php ]; then
+  fetch "suitecrm-extension/custom/include/BS/dashboard_board.php" "custom/include/BS/dashboard_board.php" || true
+fi
+
+echo "==> Patch entry_point_registry.ext.php (override retrieve_dash_page)"
 python3 - << 'PY'
 from pathlib import Path
 ext = Path("custom/application/Ext/EntryPointRegistry/entry_point_registry.ext.php")
+keys = ("retrieve_dash_page", "bs_operations_board", "bs_dash_fix")
 text = ext.read_text() if ext.exists() else "<?php\n"
-# Drop any prior bs_operations_board related debris / duplicate php opens after first
-lines = []
-skip_block = False
+lines=[]; skip=False
 for line in text.splitlines():
-    if "bs_operations_board" in line:
-        skip_block = True
+    if any(k in line for k in keys):
+        skip=True
         continue
-    if skip_block:
-        # skip until closing ); of the array assignment
-        if line.strip() == ");" or line.strip() == ");?>":
-            skip_block = False
+    if skip:
+        if line.strip() in (");", ");?>"):
+            skip=False
+        continue
+    s=line.strip()
+    if s.startswith("'file' => 'custom/include/BS/"):
         continue
     lines.append(line)
-# Ensure starts with <?php
-body = "\n".join(lines).strip()
+body="\n".join(lines).strip()
 if not body.startswith("<?php"):
-    body = "<?php\n" + body
-# Remove orphaned auth/file lines that can remain from bad greps
-clean = []
-for line in body.splitlines():
-    s = line.strip()
-    if s.startswith("'file' => 'custom/include/BS/dashboard_board.php'"):
-        continue
-    if s == "'auth' => true," and clean and "dashboard_board" in "\n".join(clean[-3:]):
-        continue
-    clean.append(line)
-body = "\n".join(clean).rstrip() + "\n"
-body += "\n$entry_point_registry['bs_operations_board'] = array(\n"
+    body="<?php\n"+body
+body=body.rstrip()+"\n\n"
+body += "$entry_point_registry['retrieve_dash_page'] = array(\n"
+body += "    'file' => 'custom/include/BS/retrieve_dash_page_safe.php',\n"
+body += "    'auth' => true,\n"
+body += ");\n"
+body += "$entry_point_registry['bs_operations_board'] = array(\n"
 body += "    'file' => 'custom/include/BS/dashboard_board.php',\n"
 body += "    'auth' => true,\n"
 body += ");\n"
+ext.parent.mkdir(parents=True, exist_ok=True)
 ext.write_text(body)
-print("    Wrote", ext)
+Path("custom/Extension/application/Ext/EntryPointRegistry/bs_retrieve_safe.php").write_text(
+    "<?php\n"+body.split("<?php",1)[-1] if "retrieve_dash_page" in body else "<?php\n"
+)
+print("OK registry")
 PY
 
-# Remove stray per-file ext that is not the merged name (harmless but tidy)
-rm -f custom/application/Ext/EntryPointRegistry/bs_operations_board.ext.php
+# Remove dangerous override
+if [ -f custom/include/MVC/Controller/entry_point_registry.php ]; then
+  mv -f custom/include/MVC/Controller/entry_point_registry.php \
+        custom/include/MVC/Controller/entry_point_registry.php.bak.$(date +%s)
+  echo "Removed broken custom entry_point_registry.php"
+fi
 
-echo "==> 3) Disable custom Home dashlets (prefs may still reference them)"
+# Disable custom dashlets
 for f in \
   modules/Home/Dashlets/BS_AdminDashboardDashlet/BS_AdminDashboardDashlet.php \
   modules/BS_Orders/Dashlets/BS_EmployeeWorkloadDashlet/BS_EmployeeWorkloadDashlet.php
 do
-  if [ -f "$f" ]; then
-    mv -f "$f" "${f}.off"
-    echo "    Disabled $f"
-  fi
+  [ -f "$f" ] && mv -f "$f" "${f}.off" && echo "Disabled $f"
 done
 
-echo "==> 4) Clear dashlet + controller caches"
+# Clear caches
 rm -f cache/dashlets/dashlets.php
 rm -rf cache/dashlets/* 2>/dev/null || true
-rm -rf cache/smarty/templates_c/* 2>/dev/null || true
-rm -rf cache/modules/Home/* 2>/dev/null || true
-# Sugar file cache may hold CONTROLLER_entry_point_registry_*
-find cache -name '*entry_point*' -delete 2>/dev/null || true
 find cache -name '*CONTROLLER*' -delete 2>/dev/null || true
+find cache -name '*entry_point*' -delete 2>/dev/null || true
 
-echo "==> 5) Theme style.css safety"
-mkdir -p cache/themes/SuiteP/Dawn
-if [ ! -s cache/themes/SuiteP/Dawn/style.css ]; then
-  if [ -f themes/SuiteP/css/Dawn/style.css ]; then
-    cp -f themes/SuiteP/css/Dawn/style.css cache/themes/SuiteP/Dawn/style.css
-  fi
-fi
-chmod -R 775 cache || true
-
-echo "==> 6) Write SQL to reset Home dash prefs"
-SQL_FILE="$BASE/bs_reset_home_dashlets.sql"
-cat > "$SQL_FILE" << 'EOF'
--- phpMyAdmin: select SuiteCRM DB, then run this
-DELETE FROM user_preferences
-WHERE category = 'Home'
-  AND deleted = 0;
+# SQL file
+cat > bs_reset_home_dashlets.sql << 'EOF'
+DELETE FROM user_preferences WHERE category = 'Home' AND deleted = 0;
 EOF
-echo "    $SQL_FILE"
 
-php -r 'if (function_exists("opcache_reset")) { opcache_reset(); echo "opcache cleared\n"; }' 2>/dev/null || true
+php -r 'if (function_exists("opcache_reset")) opcache_reset();' 2>/dev/null || true
 
 echo
-echo "============================================"
-echo "FILES DONE. Ab ZAROORI:"
-echo "1) phpMyAdmin me SQL chalao: bs_reset_home_dashlets.sql"
-echo "2) Logout / Login"
-echo "3) Home hard refresh (Ctrl+Shift+R)"
-echo "4) Console me retrieve_dash_page ab 200 hona chahiye"
+echo "========================================"
+echo "AB YE 2 CHEEZ KARO:"
 echo
-echo "Client board (alag page):"
-echo "https://yoogleconsultancy.in/index.php?entryPoint=bs_operations_board"
-echo "============================================"
+echo "A) Browser (login optional):"
+echo "   https://yoogleconsultancy.in/bs_fix.php"
+echo "   Plain text dikhega — copy karke bhej dena."
+echo
+echo "B) phpMyAdmin SQL (agar A me SQL fail ho):"
+echo "   DELETE FROM user_preferences WHERE category = 'Home' AND deleted = 0;"
+echo
+echo "Phir Home: Ctrl+Shift+R"
+echo "Baad me delete: rm ~/public_html/bs_fix.php"
+echo "========================================"
