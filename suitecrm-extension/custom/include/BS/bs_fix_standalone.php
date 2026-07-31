@@ -13,16 +13,19 @@ ini_set('log_errors', '1');
 header('Content-Type: text/plain; charset=UTF-8');
 echo "BS FIX start\n";
 
-$logDir = __DIR__ . '/cache';
-if (!is_dir($logDir)) {
-    @mkdir($logDir, 0755, true);
+$bsFixLogDir = __DIR__ . '/cache';
+if (!is_dir($bsFixLogDir)) {
+    @mkdir($bsFixLogDir, 0755, true);
 }
-$log = $logDir . '/bs_fix_standalone.log';
+// IMPORTANT: do not use $log — SuiteCRM sets global $log = LoggerManager
+$bs_fix_log_file = $bsFixLogDir . '/bs_fix_standalone.log';
 function slog($m)
 {
-    global $log;
+    global $bs_fix_log_file;
     $line = date('c') . ' ' . $m . "\n";
-    @file_put_contents($log, $line, FILE_APPEND);
+    if (is_string($bs_fix_log_file) && $bs_fix_log_file !== '') {
+        @file_put_contents($bs_fix_log_file, $line, FILE_APPEND);
+    }
     echo $m . "\n";
 }
 
@@ -31,6 +34,8 @@ try {
         define('sugarEntry', true);
     }
     require_once 'include/entryPoint.php';
+    // Re-assert our log path after SuiteCRM bootstrap clobbers $log
+    $bs_fix_log_file = __DIR__ . '/cache/bs_fix_standalone.log';
     slog('bootstrap OK');
 
     global $current_user, $db;
