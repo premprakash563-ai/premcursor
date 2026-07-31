@@ -242,6 +242,11 @@ header('Content-Type: text/html; charset=UTF-8');
 </body>
 </html>
 <?php
+if (!isset($GLOBALS['log']) || !is_object($GLOBALS['log']) || !method_exists($GLOBALS['log'], 'debug')) {
+    if (class_exists('LoggerManager')) {
+        $GLOBALS['log'] = LoggerManager::getLogger('SugarCRM');
+    }
+}
 if (function_exists('sugar_cleanup')) {
     sugar_cleanup(true);
 }
