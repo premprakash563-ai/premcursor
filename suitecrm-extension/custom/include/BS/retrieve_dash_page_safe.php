@@ -1,11 +1,17 @@
 <?php
 /**
  * Force-safe retrieve_dash_page — never 500 the Home dashboard AJAX.
- * Marker in output: BS-SAFE-DASH so Network response can be verified.
+ * Also restores LoggerManager if $GLOBALS['log'] was overwritten with a string.
  */
 
 if (!defined('sugarEntry') || !sugarEntry) {
     die('Not A Valid Entry Point');
+}
+
+if (!isset($GLOBALS['log']) || !is_object($GLOBALS['log']) || !method_exists($GLOBALS['log'], 'debug')) {
+    if (class_exists('LoggerManager')) {
+        $GLOBALS['log'] = LoggerManager::getLogger('SugarCRM');
+    }
 }
 
 header('X-BS-Dash: safe-wrapper');
@@ -19,8 +25,19 @@ function bs_dash_log($msg)
     @file_put_contents($file, date('c') . ' ' . $msg . "\n", FILE_APPEND);
 }
 
+function bs_dash_restore_logger()
+{
+    if (!isset($GLOBALS['log']) || !is_object($GLOBALS['log']) || !method_exists($GLOBALS['log'], 'debug')) {
+        if (class_exists('LoggerManager')) {
+            $GLOBALS['log'] = LoggerManager::getLogger('SugarCRM');
+            bs_dash_log('restored LoggerManager');
+        }
+    }
+}
+
 function bs_dash_minimal_html($reason = '')
 {
+    bs_dash_restore_logger();
     $reason = htmlspecialchars((string) $reason, ENT_QUOTES, 'UTF-8');
     echo '<!-- BS-SAFE-DASH -->';
     echo '<div id="pageNum_0_div">';
@@ -37,20 +54,17 @@ function bs_dash_minimal_html($reason = '')
 }
 
 bs_dash_log('safe wrapper hit');
-
-// Prefer Ops board over crashing core charts/dashlets while we stabilize Home.
-// Attempt core once; on any Throwable OR shutdown fatal, serve minimal HTML.
 $bsDashDone = false;
 
 register_shutdown_function(function () {
     global $bsDashDone;
+    bs_dash_restore_logger();
     if (!empty($bsDashDone)) {
         return;
     }
     $err = error_get_last();
     if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
         bs_dash_log('SHUTDOWN FATAL: ' . $err['message'] . ' @ ' . $err['file'] . ':' . $err['line']);
-        // clear any partial output
         while (ob_get_level() > 0) {
             @ob_end_clean();
         }
@@ -64,7 +78,6 @@ register_shutdown_function(function () {
 });
 
 try {
-    // Ensure custom broken dashlets are not loaded
     foreach ([
         'modules/Home/Dashlets/BS_AdminDashboardDashlet/BS_AdminDashboardDashlet.php',
         'modules/BS_Orders/Dashlets/BS_EmployeeWorkloadDashlet/BS_EmployeeWorkloadDashlet.php',
@@ -74,7 +87,6 @@ try {
         }
     }
 
-    // Soft-reset this user's Home prefs if pages look empty/corrupt mid-request
     global $current_user, $db;
     if (!empty($current_user->id) && !empty($db)) {
         $pages = $current_user->getPreference('pages', 'Home');
@@ -99,6 +111,7 @@ try {
     ob_start();
     include 'include/MySugar/retrieve_dash_page.php';
     $out = ob_get_clean();
+    bs_dash_restore_logger();
     $bsDashDone = true;
 
     if ($out === '' || $out === false) {
@@ -113,6 +126,7 @@ try {
     while (ob_get_level() > 0) {
         @ob_end_clean();
     }
+    bs_dash_restore_logger();
     $bsDashDone = true;
     bs_dash_minimal_html($e->getMessage());
 }
