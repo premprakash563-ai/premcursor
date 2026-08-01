@@ -18,6 +18,17 @@ White-label, multi-tenant school and coaching management platform built with **N
 - Lucide icons
 - Local demo AI generators (ready to wire to OpenAI / Gemini)
 
+## Requirements
+
+- **Node.js 20 LTS** (or 18.18+) — Node 14/16 will fail
+- npm 9+ (comes with Node 20)
+
+Download Node 20: https://nodejs.org
+
+```bash
+node -v   # should show v20.x
+```
+
 ## Run locally
 
 ```bash
