@@ -9,11 +9,13 @@ import {
   inputClass,
 } from "@/components/ui";
 import { useTenant } from "@/components/providers";
+import { useCampus } from "@/components/campus-store";
 import { DEMO_SCHOOL } from "@/lib/data";
 import { Check, Globe2, Palette, RotateCcw } from "lucide-react";
 
 export default function BrandingPage() {
   const { school, updateSchool, resetSchool } = useTenant();
+  const { resetCampus } = useCampus();
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState(() => school);
 
@@ -25,6 +27,7 @@ export default function BrandingPage() {
 
   function handleReset() {
     resetSchool();
+    resetCampus();
     setForm(DEMO_SCHOOL);
   }
 

@@ -1,14 +1,50 @@
 "use client";
 
-import { DataTable, PageHeader, PrimaryButton, StatusPill } from "@/components/ui";
-import { LEAVES } from "@/lib/data";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { DataTable, PageHeader, StatusPill } from "@/components/ui";
+import { useCampus } from "@/components/campus-store";
+import {
+  Field,
+  Modal,
+  PrimaryButton,
+  SecondaryButton,
+  Toolbar,
+  inputClass,
+  useQueryFilter,
+} from "@/components/module-kit";
 
 export default function LeavePage() {
-  const [rows, setRows] = useState(LEAVES);
+  const { leaves, setLeaveStatus, addLeave } = useCampus();
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    role: "Teacher",
+    type: "Casual",
+    from: new Date().toISOString().slice(0, 10),
+    to: new Date().toISOString().slice(0, 10),
+    reason: "",
+  });
 
-  function setStatus(id: string, status: "approved" | "rejected") {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  const getText = useCallback(
+    (l: (typeof leaves)[0]) =>
+      `${l.name} ${l.role} ${l.type} ${l.reason} ${l.status}`,
+    [],
+  );
+  const filtered = useQueryFilter(leaves, query, getText);
+
+  function submit() {
+    if (!form.name.trim()) return;
+    addLeave({
+      name: form.name.trim(),
+      role: form.role,
+      type: form.type,
+      from: form.from,
+      to: form.to,
+      reason: form.reason || "—",
+      status: "pending",
+    });
+    setOpen(false);
   }
 
   return (
@@ -16,11 +52,18 @@ export default function LeavePage() {
       <PageHeader
         eyebrow="HR & students"
         title="Leave management"
-        description="Approve teacher, staff, and student leave with a single workflow."
+        description="Apply, approve or reject leave for teachers, staff and students."
+      />
+      <Toolbar
+        query={query}
+        onQuery={setQuery}
+        placeholder="Search leave requests…"
+        actionLabel="Apply leave"
+        onAction={() => setOpen(true)}
       />
       <DataTable
         columns={["Name", "Role", "Type", "From", "To", "Reason", "Status", ""]}
-        rows={rows.map((l) => [
+        rows={filtered.map((l) => [
           l.name,
           l.role,
           l.type,
@@ -32,13 +75,14 @@ export default function LeavePage() {
             <div key={`${l.id}-a`} className="flex gap-2">
               <PrimaryButton
                 className="!px-3 !py-1.5 !text-xs"
-                onClick={() => setStatus(l.id, "approved")}
+                onClick={() => setLeaveStatus(l.id, "approved")}
               >
                 Approve
               </PrimaryButton>
               <button
-                className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs"
-                onClick={() => setStatus(l.id, "rejected")}
+                type="button"
+                className="rounded-xl border border-[var(--line)] px-3 py-1.5 text-xs font-semibold"
+                onClick={() => setLeaveStatus(l.id, "rejected")}
               >
                 Reject
               </button>
@@ -48,6 +92,77 @@ export default function LeavePage() {
           ),
         ])}
       />
+
+      <Modal
+        open={open}
+        title="Apply for leave"
+        onClose={() => setOpen(false)}
+        footer={
+          <>
+            <SecondaryButton onClick={() => setOpen(false)}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={submit}>Submit</PrimaryButton>
+          </>
+        }
+      >
+        <Field label="Name">
+          <input
+            className={inputClass}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Role">
+            <select
+              className={inputClass}
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+            >
+              <option>Teacher</option>
+              <option>Staff</option>
+              <option>Student</option>
+            </select>
+          </Field>
+          <Field label="Type">
+            <select
+              className={inputClass}
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+            >
+              <option>Casual</option>
+              <option>Sick</option>
+              <option>Medical</option>
+              <option>Earned</option>
+            </select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="From">
+            <input
+              type="date"
+              className={inputClass}
+              value={form.from}
+              onChange={(e) => setForm({ ...form, from: e.target.value })}
+            />
+          </Field>
+          <Field label="To">
+            <input
+              type="date"
+              className={inputClass}
+              value={form.to}
+              onChange={(e) => setForm({ ...form, to: e.target.value })}
+            />
+          </Field>
+        </div>
+        <Field label="Reason">
+          <textarea
+            className={inputClass}
+            rows={3}
+            value={form.reason}
+            onChange={(e) => setForm({ ...form, reason: e.target.value })}
+          />
+        </Field>
+      </Modal>
     </div>
   );
 }

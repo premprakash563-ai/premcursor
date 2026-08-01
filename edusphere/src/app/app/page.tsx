@@ -3,26 +3,41 @@
 import Link from "next/link";
 import { PageHeader, StatCard, SectionCard, StatusPill } from "@/components/ui";
 import { useAuth, useTenant } from "@/components/providers";
-import {
-  ATTENDANCE,
-  CLASS_PERFORMANCE,
-  DASHBOARD_STATS,
-  FEES,
-  LEAVES,
-} from "@/lib/data";
+import { useCampus } from "@/components/campus-store";
+import { CLASS_PERFORMANCE } from "@/lib/data";
 import { formatINR } from "@/lib/utils";
 import { ArrowUpRight, Sparkles, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { school } = useTenant();
+  const { students, teachers, staff, fees, leaves, attendance } = useCampus();
+
+  const collected = useMemo(
+    () => fees.reduce((a, f) => a + f.paid, 0),
+    [fees],
+  );
+  const pending = useMemo(
+    () => fees.reduce((a, f) => a + Math.max(0, f.amount - f.paid), 0),
+    [fees],
+  );
+  const avgAttendance = useMemo(() => {
+    if (!attendance.length) return 0;
+    return (
+      Math.round(
+        (attendance.reduce((s, a) => s + a.percentage, 0) / attendance.length) *
+          10,
+      ) / 10
+    );
+  }, [attendance]);
 
   return (
     <div>
       <PageHeader
         eyebrow="Campus overview"
         title={`Welcome back, ${user?.name?.split(" ")[0] ?? "there"}`}
-        description={`${school.name} · operational snapshot for today`}
+        description={`${school.name} · live operational snapshot`}
         action={
           <Link
             href="/app/ai/report-card"
@@ -37,25 +52,23 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Students"
-          value={DASHBOARD_STATS.students.toLocaleString()}
-          hint="Active enrollments"
-          trend="+2.4%"
+          value={students.length.toLocaleString()}
+          hint="Active roster"
         />
         <StatCard
           label="Teachers"
-          value={String(DASHBOARD_STATS.teachers)}
-          hint={`${DASHBOARD_STATS.staff} staff members`}
+          value={String(teachers.length)}
+          hint={`${staff.length} staff members`}
         />
         <StatCard
-          label="Attendance today"
-          value={`${DASHBOARD_STATS.attendanceToday}%`}
-          hint="Campus-wide average"
-          trend="Stable"
+          label="Attendance avg"
+          value={`${avgAttendance}%`}
+          hint="Across tracked students"
         />
         <StatCard
           label="Fees collected"
-          value={formatINR(DASHBOARD_STATS.feeCollected)}
-          hint={`${formatINR(DASHBOARD_STATS.feePending)} pending`}
+          value={formatINR(collected)}
+          hint={`${formatINR(pending)} pending`}
         />
       </div>
 
@@ -78,9 +91,7 @@ export default function DashboardPage() {
                   <span className="font-medium text-[var(--ink-soft)]">
                     Class {c.className}
                   </span>
-                  <span className="tabular-nums font-semibold text-[var(--ink)]">
-                    {c.avg}%
-                  </span>
+                  <span className="tabular-nums font-semibold">{c.avg}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-[var(--surface)]">
                   <div
@@ -114,20 +125,26 @@ export default function DashboardPage() {
 
           <SectionCard title="Pending leaves">
             <ul className="space-y-3">
-              {LEAVES.filter((l) => l.status === "pending").map((l) => (
-                <li
-                  key={l.id}
-                  className="flex items-start justify-between gap-2 rounded-xl bg-[var(--surface)] px-3 py-2.5"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{l.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {l.type} · {l.from}
-                    </p>
-                  </div>
-                  <StatusPill status={l.status} />
-                </li>
-              ))}
+              {leaves.filter((l) => l.status === "pending").length === 0 && (
+                <li className="text-sm text-[var(--muted)]">No pending leaves</li>
+              )}
+              {leaves
+                .filter((l) => l.status === "pending")
+                .slice(0, 4)
+                .map((l) => (
+                  <li
+                    key={l.id}
+                    className="flex items-start justify-between gap-2 rounded-xl bg-[var(--surface)] px-3 py-2.5"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{l.name}</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {l.type} · {l.from}
+                      </p>
+                    </div>
+                    <StatusPill status={l.status} />
+                  </li>
+                ))}
             </ul>
           </SectionCard>
         </div>
@@ -136,18 +153,18 @@ export default function DashboardPage() {
           title="Fee health"
           action={
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--success)]">
-              <TrendingUp className="h-3.5 w-3.5" /> On track
+              <TrendingUp className="h-3.5 w-3.5" /> Live
             </span>
           }
         >
           <ul className="divide-y divide-[var(--line)]">
-            {FEES.slice(0, 5).map((f) => (
+            {fees.slice(0, 5).map((f) => (
               <li
                 key={f.id}
                 className="flex items-center justify-between py-3 text-sm"
               >
                 <div>
-                  <p className="font-medium text-[var(--ink)]">{f.studentName}</p>
+                  <p className="font-medium">{f.studentName}</p>
                   <p className="text-xs text-[var(--muted)]">
                     {f.category} · {f.className}
                   </p>
@@ -179,7 +196,7 @@ export default function DashboardPage() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[...ATTENDANCE]
+            {[...attendance]
               .sort((a, b) => a.percentage - b.percentage)
               .map((a) => (
                 <div

@@ -1,16 +1,32 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { DataTable, PageHeader, StatusPill } from "@/components/ui";
-import { PAYROLL } from "@/lib/data";
+import { useCampus } from "@/components/campus-store";
 import { formatINR } from "@/lib/utils";
+import { Toolbar, useQueryFilter } from "@/components/module-kit";
 
 export default function PayrollPage() {
+  const { payroll, markPayrollPaid } = useCampus();
+  const [query, setQuery] = useState("");
+
+  const getText = useCallback(
+    (p: (typeof payroll)[0]) => `${p.name} ${p.role} ${p.month} ${p.status}`,
+    [],
+  );
+  const filtered = useQueryFilter(payroll, query, getText);
+
   return (
     <div>
       <PageHeader
         eyebrow="Finance · HR"
         title="Payroll"
-        description="Salary processing for teachers and staff with allowances and deductions."
+        description="Process salary payouts for teachers and staff."
+      />
+      <Toolbar
+        query={query}
+        onQuery={setQuery}
+        placeholder="Search payroll records…"
       />
       <DataTable
         columns={[
@@ -22,8 +38,9 @@ export default function PayrollPage() {
           "Net",
           "Month",
           "Status",
+          "Actions",
         ]}
-        rows={PAYROLL.map((p) => [
+        rows={filtered.map((p) => [
           p.name,
           p.role,
           formatINR(p.basic),
@@ -34,6 +51,18 @@ export default function PayrollPage() {
           </span>,
           p.month,
           <StatusPill key={p.id} status={p.status} />,
+          p.status !== "paid" ? (
+            <button
+              key={`${p.id}-a`}
+              type="button"
+              className="text-xs font-semibold text-[var(--brand-primary)]"
+              onClick={() => markPayrollPaid(p.id)}
+            >
+              Mark paid
+            </button>
+          ) : (
+            "—"
+          ),
         ])}
       />
     </div>

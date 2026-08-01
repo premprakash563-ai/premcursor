@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Sora } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { CampusProvider } from "@/components/campus-store";
 import "./globals.css";
 
 const display = Fraunces({
@@ -29,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <CampusProvider>{children}</CampusProvider>
+        </Providers>
       </body>
     </html>
   );

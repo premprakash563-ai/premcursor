@@ -328,8 +328,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
                   <input
                     className="w-56 rounded-xl border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/15 lg:w-72"
-                    placeholder="Search campus…"
-                    readOnly
+                    placeholder="Search students…"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const q = (e.target as HTMLInputElement).value.trim();
+                        router.push(
+                          q
+                            ? `/app/students?q=${encodeURIComponent(q)}`
+                            : "/app/students",
+                        );
+                      }
+                    }}
                   />
                 </div>
                 <button

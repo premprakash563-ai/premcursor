@@ -8,19 +8,21 @@ import {
   inputClass,
 } from "@/components/ui";
 import { generateReportCard, type StudentReportCard } from "@/lib/ai";
-import { STUDENTS } from "@/lib/data";
 import { Sparkles } from "lucide-react";
 import { useTenant } from "@/components/providers";
+import { useCampus } from "@/components/campus-store";
 
 export default function AIReportCardPage() {
   const { school } = useTenant();
-  const [studentId, setStudentId] = useState(STUDENTS[0].id);
+  const { students } = useCampus();
+  const [studentId, setStudentId] = useState(students[0]?.id ?? "");
   const [term, setTerm] = useState("Term 2 · 2025-26");
   const [loading, setLoading] = useState(false);
   const [card, setCard] = useState<StudentReportCard | null>(null);
 
   async function run() {
-    const student = STUDENTS.find((s) => s.id === studentId)!;
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
     setLoading(true);
     setCard(null);
     const result = await generateReportCard({
@@ -48,7 +50,7 @@ export default function AIReportCardPage() {
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
             >
-              {STUDENTS.map((s) => (
+              {students.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.className}-{s.section})
                 </option>
