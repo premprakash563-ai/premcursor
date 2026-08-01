@@ -22,6 +22,7 @@ White-label, multi-tenant school and coaching management platform built with **N
 
 - **Node.js 20 LTS** (or 18.18+) — Node 14/16 will fail
 - npm 9+ (comes with Node 20)
+- Git
 
 Download Node 20: https://nodejs.org
 
@@ -29,7 +30,47 @@ Download Node 20: https://nodejs.org
 node -v   # should show v20.x
 ```
 
-## Run locally
+## Sync with Git (recommended — no zip)
+
+### First time (clone)
+
+```bash
+git clone -b cursor/school-coaching-saas-b90f https://github.com/premprakash563-ai/premcursor.git
+cd premcursor/edusphere
+npm install
+npm run dev
+```
+
+Open http://localhost:3000
+
+### Already have the project folder
+
+If your code is in `C:\edusphere` (or similar), connect it once:
+
+```bash
+cd C:\edusphere
+git init
+git remote remove origin
+git remote add origin https://github.com/premprakash563-ai/premcursor.git
+git fetch origin
+git checkout -B cursor/school-coaching-saas-b90f origin/cursor/school-coaching-saas-b90f
+npm install
+npm run dev
+```
+
+> If `edusphere` is inside a parent clone (`premcursor/edusphere`), run git commands from the **premcursor** root, then `cd edusphere`.
+
+### Every time the project is updated
+
+```bash
+cd premcursor
+git pull origin cursor/school-coaching-saas-b90f
+cd edusphere
+npm install
+npm run dev
+```
+
+## Run locally (after sync)
 
 ```bash
 cd edusphere
