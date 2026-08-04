@@ -78,3 +78,24 @@ function hardware_forge_elementor_disable_defaults() {
 	update_option( 'elementor_disable_color_schemes', 'yes' );
 	update_option( 'elementor_disable_typography_schemes', 'yes' );
 }
+
+/**
+ * Whether the front/static page has Elementor or editor content worth rendering.
+ *
+ * @param int|null $post_id Optional post ID.
+ * @return bool
+ */
+function hardware_forge_front_page_has_builder_content( $post_id = null ) {
+	$post = $post_id ? get_post( $post_id ) : get_post();
+	if ( ! $post ) {
+		return false;
+	}
+
+	if ( hardware_forge_is_elementor_page( $post->ID ) ) {
+		$data = get_post_meta( $post->ID, '_elementor_data', true );
+		return ! empty( $data ) && '[]' !== $data;
+	}
+
+	$content = trim( (string) $post->post_content );
+	return '' !== $content;
+}
