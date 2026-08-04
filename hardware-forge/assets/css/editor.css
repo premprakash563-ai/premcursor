@@ -1,0 +1,12 @@
+body {
+	font-family: "Manrope", sans-serif;
+	color: #141414;
+	background: #ffffff;
+}
+
+.editor-styles-wrapper h1,
+.editor-styles-wrapper h2,
+.editor-styles-wrapper h3 {
+	font-family: "Outfit", sans-serif;
+	letter-spacing: -0.03em;
+}

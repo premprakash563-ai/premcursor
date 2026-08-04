@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/theme.json",
+	"version": 2,
+	"settings": {
+		"appearanceTools": true,
+		"layout": {
+			"contentSize": "720px",
+			"wideSize": "1240px"
+		},
+		"color": {
+			"palette": [
+				{ "slug": "yellow", "name": "Brand Yellow", "color": "#ffcc00" },
+				{ "slug": "yellow-deep", "name": "Yellow Deep", "color": "#e6b800" },
+				{ "slug": "black", "name": "Black", "color": "#0a0a0a" },
+				{ "slug": "ink", "name": "Ink", "color": "#141414" },
+				{ "slug": "muted", "name": "Muted", "color": "#5c5c5c" },
+				{ "slug": "surface", "name": "Surface", "color": "#f6f6f6" },
+				{ "slug": "white", "name": "White", "color": "#ffffff" }
+			]
+		},
+		"typography": {
+			"fontFamilies": [
+				{
+					"fontFamily": "\"Outfit\", sans-serif",
+					"name": "Outfit",
+					"slug": "display"
+				},
+				{
+					"fontFamily": "\"Manrope\", sans-serif",
+					"name": "Manrope",
+					"slug": "body"
+				}
+			]
+		}
+	}
+}
