@@ -104,9 +104,16 @@ add_filter( 'woocommerce_add_to_cart_fragments', 'hardware_forge_cart_link_fragm
  */
 function hardware_forge_cart_link() {
 	$count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+	$total = WC()->cart ? WC()->cart->get_cart_subtotal() : '';
 	?>
 	<a class="hf-cart-link" href="<?php echo esc_url( wc_get_cart_url() ); ?>" aria-label="<?php esc_attr_e( 'View cart', 'hardware-forge' ); ?>">
-		<span class="hf-cart-link__label"><?php esc_html_e( 'Cart', 'hardware-forge' ); ?></span>
+		<span class="hf-cart-link__icon" aria-hidden="true">
+			<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 5h2l2.4 10.2a2 2 0 0 0 2 1.5h7.8a2 2 0 0 0 2-1.5L21 8H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.5" fill="currentColor"/><circle cx="18" cy="20" r="1.5" fill="currentColor"/></svg>
+		</span>
+		<span class="hf-cart-link__meta">
+			<span class="hf-cart-link__label"><?php esc_html_e( 'Cart', 'hardware-forge' ); ?></span>
+			<span class="hf-cart-link__total"><?php echo wp_kses_post( $total ); ?></span>
+		</span>
 		<span class="hf-cart-link__count" data-cart-count><?php echo absint( $count ); ?></span>
 	</a>
 	<?php

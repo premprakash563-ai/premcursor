@@ -59,9 +59,18 @@ function hardware_forge_posted_on() {
  */
 function hardware_forge_fallback_menu() {
 	echo '<ul class="hf-menu hf-menu--fallback">';
-	echo '<li><a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'Home', 'hardware-forge' ) . '</a></li>';
+	$items = array(
+		home_url( '/' )           => __( 'Home', 'hardware-forge' ),
+		home_url( '/about/' )     => __( 'About us', 'hardware-forge' ),
+		home_url( '/store-locator/' ) => __( 'Store locator', 'hardware-forge' ),
+		home_url( '/franchising/' )   => __( 'Franchising', 'hardware-forge' ),
+		home_url( '/support/' )   => __( 'Support', 'hardware-forge' ),
+	);
 	if ( class_exists( 'WooCommerce' ) ) {
-		echo '<li><a href="' . esc_url( wc_get_page_permalink( 'shop' ) ) . '">' . esc_html__( 'Shop', 'hardware-forge' ) . '</a></li>';
+		$items = array( wc_get_page_permalink( 'shop' ) => __( 'Products', 'hardware-forge' ) ) + $items;
+	}
+	foreach ( $items as $url => $label ) {
+		echo '<li><a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a></li>';
 	}
 	echo '</ul>';
 }

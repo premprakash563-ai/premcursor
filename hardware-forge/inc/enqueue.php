@@ -17,7 +17,7 @@ add_action( 'wp_enqueue_scripts', 'hardware_forge_enqueue_assets' );
 function hardware_forge_enqueue_assets() {
 	wp_enqueue_style(
 		'hardware-forge-fonts',
-		'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap',
+		'https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap',
 		array(),
 		null
 	);

@@ -5,29 +5,29 @@
 		"appearanceTools": true,
 		"layout": {
 			"contentSize": "720px",
-			"wideSize": "1200px"
+			"wideSize": "1240px"
 		},
 		"color": {
 			"palette": [
-				{ "slug": "steel-950", "name": "Steel 950", "color": "#121417" },
-				{ "slug": "steel-900", "name": "Steel 900", "color": "#1a1e24" },
-				{ "slug": "brass", "name": "Brass", "color": "#b8872c" },
-				{ "slug": "brass-glow", "name": "Brass Glow", "color": "#d4a84b" },
-				{ "slug": "paper", "name": "Paper", "color": "#f3f1ec" },
-				{ "slug": "concrete", "name": "Concrete", "color": "#e8e4dc" },
-				{ "slug": "ink", "name": "Ink", "color": "#16191e" }
+				{ "slug": "yellow", "name": "Brand Yellow", "color": "#ffcc00" },
+				{ "slug": "yellow-deep", "name": "Yellow Deep", "color": "#e6b800" },
+				{ "slug": "black", "name": "Black", "color": "#0a0a0a" },
+				{ "slug": "ink", "name": "Ink", "color": "#141414" },
+				{ "slug": "muted", "name": "Muted", "color": "#5c5c5c" },
+				{ "slug": "surface", "name": "Surface", "color": "#f6f6f6" },
+				{ "slug": "white", "name": "White", "color": "#ffffff" }
 			]
 		},
 		"typography": {
 			"fontFamilies": [
 				{
-					"fontFamily": "\"Barlow Condensed\", sans-serif",
-					"name": "Barlow Condensed",
+					"fontFamily": "\"Outfit\", sans-serif",
+					"name": "Outfit",
 					"slug": "display"
 				},
 				{
-					"fontFamily": "\"IBM Plex Sans\", sans-serif",
-					"name": "IBM Plex Sans",
+					"fontFamily": "\"Manrope\", sans-serif",
+					"name": "Manrope",
 					"slug": "body"
 				}
 			]

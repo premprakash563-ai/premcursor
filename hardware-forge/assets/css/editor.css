@@ -1,13 +1,12 @@
 body {
-	font-family: "IBM Plex Sans", sans-serif;
-	color: #16191e;
-	background: #f3f1ec;
+	font-family: "Manrope", sans-serif;
+	color: #141414;
+	background: #ffffff;
 }
 
 .editor-styles-wrapper h1,
 .editor-styles-wrapper h2,
 .editor-styles-wrapper h3 {
-	font-family: "Barlow Condensed", sans-serif;
-	text-transform: uppercase;
-	letter-spacing: 0.02em;
+	font-family: "Outfit", sans-serif;
+	letter-spacing: -0.03em;
 }

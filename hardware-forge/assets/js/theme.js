@@ -2,6 +2,7 @@
 	const header = document.querySelector("[data-hf-header]");
 	const toggle = document.querySelector("[data-hf-nav-toggle]");
 	const nav = document.querySelector("[data-hf-nav]");
+	const backTop = document.querySelector("[data-hf-back-top]");
 
 	if (toggle && nav) {
 		toggle.addEventListener("click", () => {
@@ -10,18 +11,16 @@
 		});
 	}
 
-	if (!header) return;
-
 	let lastY = window.scrollY;
 	let ticking = false;
 
 	const onScroll = () => {
 		const y = window.scrollY;
-		if (y > 120 && y > lastY) {
-			header.classList.add("is-hidden");
-		} else {
-			header.classList.remove("is-hidden");
+		if (header) {
+			if (y > 140 && y > lastY) header.classList.add("is-hidden");
+			else header.classList.remove("is-hidden");
 		}
+		if (backTop) backTop.hidden = y < 500;
 		lastY = y;
 		ticking = false;
 	};
@@ -36,4 +35,10 @@
 		},
 		{ passive: true }
 	);
+
+	if (backTop) {
+		backTop.addEventListener("click", () => {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		});
+	}
 })();

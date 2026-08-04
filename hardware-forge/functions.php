@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'HARDWARE_FORGE_VERSION', '1.0.0' );
+define( 'HARDWARE_FORGE_VERSION', '1.1.0' );
 define( 'HARDWARE_FORGE_DIR', get_template_directory() );
 define( 'HARDWARE_FORGE_URI', get_template_directory_uri() );
 
