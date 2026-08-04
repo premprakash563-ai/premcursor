@@ -1,22 +1,22 @@
 <?php
 /*
 Plugin Name: Auto Amelia MyCred Deduction (Parent–Student Smart)
-Description: Automatically deduct MyCred credits for unpaid Amelia bookings. Handles parent–student relation and smart credit split (student first → parent fallback). Allows unlimited negative balance.
-Version: 3.3
+Description: Automatically deduct MyCred credits for unpaid Amelia bookings. Runs immediately on booking create (front + back end), with a 5-minute WP-Cron safety net. Parent–student smart split (student first → parent fallback). Allows unlimited negative balance.
+Version: 3.4
 Author: Custom Integration
 */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * Custom WP-Cron interval: every 15 minutes.
+ * Custom WP-Cron interval: every 5 minutes (safety-net catch-up only).
  */
 add_filter('cron_schedules', 'auto_amelia_mycred_deduction_cron_schedules');
 function auto_amelia_mycred_deduction_cron_schedules($schedules) {
-    if (!isset($schedules['every_fifteen_minutes'])) {
-        $schedules['every_fifteen_minutes'] = [
-            'interval' => 15 * MINUTE_IN_SECONDS,
-            'display'  => 'Every Fifteen Minutes',
+    if (!isset($schedules['every_five_minutes'])) {
+        $schedules['every_five_minutes'] = [
+            'interval' => 5 * MINUTE_IN_SECONDS,
+            'display'  => 'Every Five Minutes',
         ];
     }
     return $schedules;
@@ -29,12 +29,16 @@ register_activation_hook(__FILE__, 'auto_amelia_mycred_deduction_activate');
 register_deactivation_hook(__FILE__, 'auto_amelia_mycred_deduction_deactivate');
 
 function auto_amelia_mycred_deduction_activate() {
-    if (!wp_next_scheduled('auto_amelia_mycred_deduction_cron')) {
-        wp_schedule_event(time(), 'every_fifteen_minutes', 'auto_amelia_mycred_deduction_cron');
-    }
+    // Clear any older 15-min schedule from previous versions, then set 5-min.
+    auto_amelia_mycred_deduction_clear_cron();
+    wp_schedule_event(time(), 'every_five_minutes', 'auto_amelia_mycred_deduction_cron');
 }
 
 function auto_amelia_mycred_deduction_deactivate() {
+    auto_amelia_mycred_deduction_clear_cron();
+}
+
+function auto_amelia_mycred_deduction_clear_cron() {
     $timestamp = wp_next_scheduled('auto_amelia_mycred_deduction_cron');
     while ($timestamp) {
         wp_unschedule_event($timestamp, 'auto_amelia_mycred_deduction_cron');
@@ -44,17 +48,65 @@ function auto_amelia_mycred_deduction_deactivate() {
 
 /**
  * Safety net: if the plugin was updated in place (activation hook did not
- * re-fire), ensure the cron event is registered.
+ * re-fire), ensure a 5-minute cron event is registered. Also migrates off
+ * any leftover non-5-minute schedule from older versions.
  */
 add_action('init', 'auto_amelia_mycred_deduction_ensure_scheduled');
 function auto_amelia_mycred_deduction_ensure_scheduled() {
-    if (!wp_next_scheduled('auto_amelia_mycred_deduction_cron')) {
-        wp_schedule_event(time(), 'every_fifteen_minutes', 'auto_amelia_mycred_deduction_cron');
+    $timestamp = wp_next_scheduled('auto_amelia_mycred_deduction_cron');
+    if (!$timestamp) {
+        wp_schedule_event(time(), 'every_five_minutes', 'auto_amelia_mycred_deduction_cron');
+        return;
+    }
+
+    // If an old interval is still scheduled, reschedule to 5 minutes.
+    $cron = _get_cron_array();
+    $hook = 'auto_amelia_mycred_deduction_cron';
+    $need_reschedule = true;
+
+    if (is_array($cron)) {
+        foreach ($cron as $events) {
+            if (!isset($events[$hook])) {
+                continue;
+            }
+            foreach ($events[$hook] as $event) {
+                if (isset($event['schedule']) && $event['schedule'] === 'every_five_minutes') {
+                    $need_reschedule = false;
+                }
+            }
+        }
+    }
+
+    if ($need_reschedule) {
+        auto_amelia_mycred_deduction_clear_cron();
+        wp_schedule_event(time(), 'every_five_minutes', 'auto_amelia_mycred_deduction_cron');
     }
 }
 
-// Run on schedule only — not on every front-end / admin request.
+// ---------------------------------------------------------------
+// TRIGGERS
+// 1) Immediate: Amelia booking / appointment created (front + admin)
+// 2) Catch-up: 5-minute WP-Cron (missed hooks, races, old unpaid)
+// Never on every page load (that caused the flood).
+// ---------------------------------------------------------------
+add_action('amelia_after_booking_added', 'auto_amelia_mycred_deduction_on_booking', 20, 1);
+add_action('amelia_after_appointment_added', 'auto_amelia_mycred_deduction_on_booking', 20, 3);
 add_action('auto_amelia_mycred_deduction_cron', 'auto_amelia_mycred_deduction_run');
+
+/**
+ * Booking-time trigger. Same request me dono Amelia hooks fire ho sakte
+ * hain — static guard se process ek hi baar chalta hai. Locks still
+ * protect against real concurrent runs.
+ */
+function auto_amelia_mycred_deduction_on_booking() {
+    static $already_ran = false;
+    if ($already_ran) {
+        return;
+    }
+    $already_ran = true;
+
+    auto_amelia_mycred_deduction_run();
+}
 
 function auto_amelia_mycred_deduction_run() {
     global $wpdb;
