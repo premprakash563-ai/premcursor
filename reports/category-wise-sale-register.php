@@ -44,11 +44,16 @@ if (!function_exists('h')) {
 }
 if (!function_exists('safeQuery')) {
     function safeQuery($db, $sql) {
-        $r = @$db->query($sql);
-        if (!$r) return [];
-        $rows = [];
-        while ($row = $r->fetch_assoc()) $rows[] = $row;
-        return $rows;
+        // PHP 8.1+ mysqli throws mysqli_sql_exception — @ does not suppress it
+        try {
+            $r = $db->query($sql);
+            if (!$r) return [];
+            $rows = [];
+            while ($row = $r->fetch_assoc()) $rows[] = $row;
+            return $rows;
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 }
 if (!function_exists('tableExists')) {
@@ -56,9 +61,13 @@ if (!function_exists('tableExists')) {
         static $cache = [];
         $key = strtolower($name);
         if (isset($cache[$key])) return $cache[$key];
-        $n = $db->real_escape_string($name);
-        $r = @$db->query("SHOW TABLES LIKE '$n'");
-        $cache[$key] = ($r && $r->num_rows > 0);
+        try {
+            $n = $db->real_escape_string($name);
+            $r = $db->query("SHOW TABLES LIKE '$n'");
+            $cache[$key] = ($r && $r->num_rows > 0);
+        } catch (Throwable $e) {
+            $cache[$key] = false;
+        }
         return $cache[$key];
     }
 }
@@ -67,11 +76,23 @@ if (!function_exists('columnExists')) {
         static $cache = [];
         $key = strtolower($table.'.'.$col);
         if (isset($cache[$key])) return $cache[$key];
-        $t = $db->real_escape_string($table);
-        $c = $db->real_escape_string($col);
-        $r = @$db->query("SHOW COLUMNS FROM `$t` LIKE '$c'");
-        $cache[$key] = ($r && $r->num_rows > 0);
+        try {
+            $t = $db->real_escape_string($table);
+            $c = $db->real_escape_string($col);
+            $r = $db->query("SHOW COLUMNS FROM `$t` LIKE '$c'");
+            $cache[$key] = ($r && $r->num_rows > 0);
+        } catch (Throwable $e) {
+            $cache[$key] = false;
+        }
         return $cache[$key];
+    }
+}
+if (!function_exists('firstExistingCol')) {
+    function firstExistingCol($db, $table, $candidates) {
+        foreach ($candidates as $col) {
+            if (columnExists($db, $table, $col)) return $col;
+        }
+        return null;
     }
 }
 if (!function_exists('asList')) {
@@ -339,15 +360,35 @@ if ($selSuppAcg !== '') {
 // Customer still lists all subgroup names (bill parties)
 $ddCustomer = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
 
-$ddTransport = safeQuery($db, "SELECT DISTINCT Trans_Name AS name FROM transport ORDER BY Trans_Name");
-if (empty($ddTransport)) $ddTransport = safeQuery($db, "SELECT DISTINCT IFNULL(Transport,'') AS name FROM sbill1 WHERE IFNULL(Transport,'') <> '' ORDER BY name");
-if (empty($ddTransport)) $ddTransport = safeQuery($db, "SELECT DISTINCT IFNULL(Trans_Name,'') AS name FROM sbill1 WHERE IFNULL(Trans_Name,'') <> '' ORDER BY name");
+// Transport — probe real columns (Trans_Name may not exist on this DB)
+$ddTransport = [];
+if (tableExists($db, 'transport')) {
+    $tCol = firstExistingCol($db, 'transport', ['Trans_Name', 'Transport', 'T_Name', 'Name', 'TRANSPORT']);
+    if ($tCol) $ddTransport = safeQuery($db, "SELECT DISTINCT `$tCol` AS name FROM transport WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
+}
+if (empty($ddTransport)) {
+    $tCol = firstExistingCol($db, 'sbill1', ['Transport', 'Trans_Name', 'TRANSPORT', 'TransName']);
+    if ($tCol) $ddTransport = safeQuery($db, "SELECT DISTINCT IFNULL(`$tCol`,'') AS name FROM sbill1 WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
+}
 
-$ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(sb.Ref_No, IFNULL(sb.RefNo,'')) AS refno FROM sbill1 sb WHERE IFNULL(sb.Ref_No, IFNULL(sb.RefNo,'')) <> '' ORDER BY refno LIMIT 5000");
-if (empty($ddRefNo)) $ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(p.RefNo,'') AS refno FROM product p WHERE IFNULL(p.RefNo,'') <> '' ORDER BY refno LIMIT 5000");
+// Ref No
+$ddRefNo = [];
+$refCol = firstExistingCol($db, 'sbill1', ['Ref_No', 'RefNo', 'REF_NO', 'ReferenceNo']);
+if ($refCol) {
+    $ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(`$refCol`,'') AS refno FROM sbill1 WHERE IFNULL(`$refCol`,'') <> '' ORDER BY refno LIMIT 5000");
+}
+if (empty($ddRefNo)) {
+    $pref = firstExistingCol($db, 'product', ['RefNo', 'Ref_No', 'REF_NO']);
+    if ($pref) $ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(`$pref`,'') AS refno FROM product WHERE IFNULL(`$pref`,'') <> '' ORDER BY refno LIMIT 5000");
+}
 
-$ddSaleGst = safeQuery($db, "SELECT DISTINCT ROUND(IFNULL(Tax,0)+IFNULL(SSat_Per,0),2) AS gst FROM product ORDER BY gst");
-$ddPurGst  = safeQuery($db, "SELECT DISTINCT ROUND(IFNULL(PTax, IFNULL(Pur_Tax, IFNULL(Tax,0))),2) AS gst FROM product ORDER BY gst");
+$ddSaleGst = [];
+$ssatSel = columnExists($db, 'product', 'SSat_Per') ? 'IFNULL(SSat_Per,0)' : '0';
+$ddSaleGst = safeQuery($db, "SELECT DISTINCT ROUND(IFNULL(Tax,0)+$ssatSel,2) AS gst FROM product ORDER BY gst");
+$purExpr = 'IFNULL(Tax,0)';
+if (columnExists($db, 'product', 'PTax')) $purExpr = 'IFNULL(PTax, IFNULL(Tax,0))';
+elseif (columnExists($db, 'product', 'Pur_Tax')) $purExpr = 'IFNULL(Pur_Tax, IFNULL(Tax,0))';
+$ddPurGst = safeQuery($db, "SELECT DISTINCT ROUND($purExpr,2) AS gst FROM product ORDER BY gst");
 
 $ddCity = safeQuery($db, "SELECT City_Code, City_Name FROM citymaster ORDER BY City_Name");
 if (empty($ddCity)) $ddCity = safeQuery($db, "SELECT City_Code, City_Name FROM CityMaster ORDER BY City_Name");
@@ -361,12 +402,30 @@ if (empty($ddRep)) $ddRep = safeQuery($db, "SELECT Rep_Code AS Rp_Code, Rp_Name 
 $ddBank = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 5000");
 $ddWallet = $ddBank;
 
-$ddUnit = safeQuery($db, "SELECT Unit_Code, Unit_Name FROM unitmaster ORDER BY Unit_Name");
-if (empty($ddUnit)) $ddUnit = safeQuery($db, "SELECT DISTINCT IFNULL(Unit,'') AS Unit_Code, IFNULL(Unit,'') AS Unit_Name FROM product WHERE IFNULL(Unit,'') <> '' ORDER BY Unit_Name");
+$ddUnit = [];
+if (tableExists($db, 'unitmaster')) {
+    $ddUnit = safeQuery($db, "SELECT Unit_Code, Unit_Name FROM unitmaster ORDER BY Unit_Name");
+}
+if (empty($ddUnit)) {
+    $uCol = firstExistingCol($db, 'product', ['Unit', 'Unit_Code', 'UNIT']);
+    if ($uCol) $ddUnit = safeQuery($db, "SELECT DISTINCT IFNULL(`$uCol`,'') AS Unit_Code, IFNULL(`$uCol`,'') AS Unit_Name FROM product WHERE IFNULL(`$uCol`,'') <> '' ORDER BY Unit_Name");
+}
 
-$ddComputer = safeQuery($db, "SELECT DISTINCT IFNULL(Computer, IFNULL(Comp_Name, IFNULL(Machine,''))) AS name FROM sbill1 WHERE IFNULL(Computer, IFNULL(Comp_Name, IFNULL(Machine,''))) <> '' ORDER BY name");
-$ddUser = safeQuery($db, "SELECT DISTINCT IFNULL(UserName, IFNULL(User_Name, IFNULL(`User`,''))) AS name FROM sbill1 WHERE IFNULL(UserName, IFNULL(User_Name, IFNULL(`User`,''))) <> '' ORDER BY name");
-if (empty($ddUser)) $ddUser = safeQuery($db, "SELECT UserName AS name FROM users ORDER BY UserName");
+// Computer / User — only real sbill1 columns
+$ddComputer = [];
+$compCol = firstExistingCol($db, 'sbill1', ['Computer', 'Comp_Name', 'Machine', 'COMPUTER']);
+if ($compCol) {
+    $ddComputer = safeQuery($db, "SELECT DISTINCT IFNULL(`$compCol`,'') AS name FROM sbill1 WHERE IFNULL(`$compCol`,'') <> '' ORDER BY name");
+}
+$ddUser = [];
+$userCol = firstExistingCol($db, 'sbill1', ['UserName', 'User_Name', 'User', 'USER_NAME']);
+if ($userCol) {
+    $ddUser = safeQuery($db, "SELECT DISTINCT IFNULL(`$userCol`,'') AS name FROM sbill1 WHERE IFNULL(`$userCol`,'') <> '' ORDER BY name");
+}
+if (empty($ddUser) && tableExists($db, 'users')) {
+    $uc = firstExistingCol($db, 'users', ['UserName', 'User_Name', 'NAME', 'name']);
+    if ($uc) $ddUser = safeQuery($db, "SELECT `$uc` AS name FROM users ORDER BY name");
+}
 
 // ── Group column map (.NET UPPER/LTRIM/RTRIM style) ─────────────────────────
 // Official Ist–VIth values: Product Group, Category, Company, Color, Description, Company No
@@ -375,19 +434,43 @@ $norm = function ($expr) {
     return "UPPER(LTRIM(RTRIM(IFNULL($expr,''))))";
 };
 
-// Column helpers tolerant of MySQL naming used by this app
-$totAmtExpr   = "IFNULL(st.Tot_Amt, IFNULL(st.TOT_AMT, IFNULL(st.TOT_AMOUNT,0)))";
-$totAmountExpr = "IFNULL(st.Tot_Amount, IFNULL(st.TOT_AMOUNT,0))";
-$sdiscExpr    = "IFNULL(st.SDisc_Amt, IFNULL(st.SDISC_AMT,0))";
-$billDiscExpr = "IFNULL(sb.Disc,0)";
-$taxAmtExpr   = "IFNULL(st.Tax_Amt, IFNULL(st.TAX_AMT,0))";
-$ssatExpr     = "IFNULL(st.SSat_Amt, IFNULL(st.SSAT_AMT,0))";
-$stockTaxYn   = "IFNULL(st.Tax_YN, IFNULL(st.TAX_YN,'N'))";
-$billTaxYn    = "IFNULL(sb.TAX_YN,'N')";
+// Column helpers — only reference columns that exist (MySQL errors inside IFNULL too)
+$pickCol = function ($table, $alias, $candidates, $fallbackSql = '0') use ($db) {
+    foreach ($candidates as $col) {
+        if (columnExists($db, $table, $col)) return "$alias.`$col`";
+    }
+    return $fallbackSql;
+};
+$totAmtExpr    = 'IFNULL(' . $pickCol('stock', 'st', ['Tot_Amt', 'TOT_AMT', 'TOT_AMOUNT', 'Tot_Amount'], '0') . ',0)';
+$totAmountExpr = 'IFNULL(' . $pickCol('stock', 'st', ['Tot_Amount', 'TOT_AMOUNT', 'Tot_Amt', 'TOT_AMT'], '0') . ',0)';
+$sdiscExpr     = 'IFNULL(' . $pickCol('stock', 'st', ['SDisc_Amt', 'SDISC_AMT', 'SDiscAmt'], '0') . ',0)';
+$billDiscExpr  = columnExists($db, 'sbill1', 'Disc') ? 'IFNULL(sb.Disc,0)' : '0';
+$taxAmtExpr    = 'IFNULL(' . $pickCol('stock', 'st', ['Tax_Amt', 'TAX_AMT', 'TaxAmt'], '0') . ',0)';
+$ssatExpr      = 'IFNULL(' . $pickCol('stock', 'st', ['SSat_Amt', 'SSAT_AMT', 'SSatAmt'], '0') . ',0)';
+$stockTaxYnCol = firstExistingCol($db, 'stock', ['Tax_YN', 'TAX_YN']);
+$stockTaxYn    = $stockTaxYnCol ? "IFNULL(st.`$stockTaxYnCol`,'N')" : "'N'";
+$billTaxYn     = columnExists($db, 'sbill1', 'TAX_YN') ? "IFNULL(sb.TAX_YN,'N')" : "'N'";
 // Net after bill-header discount (matches .NET Tot_Amt formula)
 $netTotExpr   = "($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))";
 // Disc amt = line disc + bill disc portion (matches .NET SDisc_Amt algebra)
-$discAmtExpr  = "($sdiscExpr + ($totAmtExpr - ($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))))";
+$discAmtExpr  = "($sdiscExpr + ($totAmtExpr * $billDiscExpr / 100))";
+
+$refNoExpr = '\'\'';
+foreach ([['sbill1','sb',['Ref_No','RefNo','REF_NO']], ['product','p',['RefNo','Ref_No','REF_NO']]] as $spec) {
+    $c = firstExistingCol($db, $spec[0], $spec[2]);
+    if ($c) { $refNoExpr = "IFNULL({$spec[1]}.`$c`,'')"; break; }
+}
+$refDateParts = [];
+foreach ([['sbill1','sb',['Ref_Date','RefDate']], ['product','p',['RefDate','Ref_Date']]] as $spec) {
+    $c = firstExistingCol($db, $spec[0], $spec[2]);
+    if ($c) $refDateParts[] = "{$spec[1]}.`$c`";
+}
+if (count($refDateParts) === 1) $refDateExpr = "IFNULL(DATE_FORMAT({$refDateParts[0]}, '%Y-%m-%d'),'')";
+elseif (count($refDateParts) >= 2) $refDateExpr = "IFNULL(DATE_FORMAT(IFNULL({$refDateParts[0]}, {$refDateParts[1]}), '%Y-%m-%d'),'')";
+else $refDateExpr = "''";
+
+$prateExpr = 'IFNULL(' . $pickCol('product', 'p', ['PRate', 'Pur_Rate', 'PurchaseRate'], '0') . ',0)';
+$srateExpr = 'IFNULL(' . $pickCol('product', 'p', ['SRate', 'Stock_Rate', 'StockRate'], '0') . ',0)';
 
 $groupColMap = [
     'ProductGroup'  => $norm('pg.ProdGroup_Name'),
@@ -396,22 +479,24 @@ $groupColMap = [
     'Color'         => $norm('col.Color_name'),
     'Description'   => $norm("IFNULL(des.Des_Name, p.PRODUCT_NAME)"),
     'CompanyNo'     => $norm('p.comp_no'),
-    // extended (same joins as .NET query)
     'City'          => $norm('cm.City_Name'),
     'CompProdCode'  => $norm('p.CompProdCode'),
     'Party'         => $norm('party.Sub_Name'),
     'ProductCode'   => $norm('p.PRODUCT_CODE'),
-    'PurGst'        => "CAST(ROUND(IFNULL(p.PTax, IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))),2) AS CHAR)",
-    'PurchaseRate'  => "CAST(ROUND(IFNULL(p.PRate, IFNULL(p.Pur_Rate,0)),2) AS CHAR)",
-    'ReferenceDate' => "IFNULL(DATE_FORMAT(IFNULL(sb.Ref_Date, IFNULL(sb.RefDate, p.RefDate)), '%Y-%m-%d'),'')",
-    'ReferenceNo'   => "IFNULL(sb.Ref_No, IFNULL(sb.RefNo, IFNULL(p.RefNo,'')))",
-    'SaleGst'       => "CAST(ROUND(IFNULL(p.Tax,0)+IFNULL(p.SSat_Per,0),2) AS CHAR)",
+    'PurGst'        => "CAST(ROUND(" . (
+        columnExists($db, 'product', 'PTax') ? 'IFNULL(p.PTax, IFNULL(p.Tax,0))' :
+        (columnExists($db, 'product', 'Pur_Tax') ? 'IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))' : 'IFNULL(p.Tax,0)')
+    ) . ",2) AS CHAR)",
+    'PurchaseRate'  => "CAST(ROUND($prateExpr,2) AS CHAR)",
+    'ReferenceDate' => $refDateExpr,
+    'ReferenceNo'   => $refNoExpr,
+    'SaleGst'       => "CAST(ROUND(IFNULL(p.Tax,0)+" . (columnExists($db, 'product', 'SSat_Per') ? 'IFNULL(p.SSat_Per,0)' : '0') . ",2) AS CHAR)",
     'SaleRate'      => "CAST(ROUND(IFNULL(st.AMOUNT/NULLIF(st.QTY,0),0),2) AS CHAR)",
     'Size'          => $norm('sm.s_name'),
     'SpInst1'       => $norm('si1.s_name'),
     'SpInst2'       => $norm('si2.s_name'),
     'SpInst3'       => $norm('si3.s_name'),
-    'StockRate'     => "CAST(ROUND(IFNULL(p.SRate, IFNULL(p.Stock_Rate,0)),2) AS CHAR)",
+    'StockRate'     => "CAST(ROUND($srateExpr,2) AS CHAR)",
 ];
 
 // Always expose Grp1..Grp6 like .NET (empty string when unused)
@@ -461,13 +546,18 @@ if ($tabCustomer === 'select' && !empty($selCustomer)) {
     $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selCustomer) . ')';
 }
 if ($tabTransport === 'select' && !empty($selTransport)) {
-    $whereParts[] = "IFNULL(sb.Transport, IFNULL(sb.Trans_Name,'')) IN (" . inListSql($db, $selTransport) . ")";
+    $tCol = firstExistingCol($db, 'sbill1', ['Transport', 'Trans_Name', 'TRANSPORT', 'TransName']);
+    if ($tCol) $whereParts[] = "IFNULL(sb.`$tCol`,'') IN (" . inListSql($db, $selTransport) . ")";
 }
 if ($tabRefNo === 'select' && !empty($selRefNo)) {
-    $whereParts[] = "IFNULL(sb.Ref_No, IFNULL(sb.RefNo, IFNULL(p.RefNo,''))) IN (" . inListSql($db, $selRefNo) . ")";
+    $refCol = firstExistingCol($db, 'sbill1', ['Ref_No', 'RefNo', 'REF_NO', 'ReferenceNo']);
+    $pref = firstExistingCol($db, 'product', ['RefNo', 'Ref_No', 'REF_NO']);
+    if ($refCol) $whereParts[] = "IFNULL(sb.`$refCol`,'') IN (" . inListSql($db, $selRefNo) . ")";
+    elseif ($pref) $whereParts[] = "IFNULL(p.`$pref`,'') IN (" . inListSql($db, $selRefNo) . ")";
 }
 if ($tabSaleGst === 'select' && !empty($selSaleGst)) {
-    $whereParts[] = 'CAST(ROUND(IFNULL(p.Tax,0)+IFNULL(p.SSat_Per,0),2) AS CHAR) IN (' . inListSql($db, $selSaleGst) . ')';
+    $ssat = columnExists($db, 'product', 'SSat_Per') ? 'IFNULL(p.SSat_Per,0)' : '0';
+    $whereParts[] = "CAST(ROUND(IFNULL(p.Tax,0)+$ssat,2) AS CHAR) IN (" . inListSql($db, $selSaleGst) . ")";
 }
 if ($tabCity === 'select' && !empty($selCity)) {
     $whereParts[] = 'cm.City_Name IN (' . inListSql($db, $selCity) . ')';
@@ -504,7 +594,14 @@ if ($tabUser === 'select' && !empty($selUser)) {
     if ($userExpr) $whereParts[] = "$userExpr IN (" . inListSql($db, $selUser) . ")";
 }
 if ($tabPurGst === 'select' && !empty($selPurGst)) {
-    $whereParts[] = 'CAST(ROUND(IFNULL(p.PTax, IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))),2) AS CHAR) IN (' . inListSql($db, $selPurGst) . ')';
+    if (columnExists($db, 'product', 'PTax')) {
+        $purWhere = 'IFNULL(p.PTax, IFNULL(p.Tax,0))';
+    } elseif (columnExists($db, 'product', 'Pur_Tax')) {
+        $purWhere = 'IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))';
+    } else {
+        $purWhere = 'IFNULL(p.Tax,0)';
+    }
+    $whereParts[] = "CAST(ROUND($purWhere,2) AS CHAR) IN (" . inListSql($db, $selPurGst) . ")";
 }
 if ($tabCategory === 'select' && !empty($selCategory)) {
     $whereParts[] = 'c.c_name IN (' . inListSql($db, $selCategory) . ')';
