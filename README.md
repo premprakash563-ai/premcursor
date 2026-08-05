@@ -1,12 +1,23 @@
 # premcursor
 
-ERP report modules for garment / retail MIS.
+## Category-wise Sale Register — direct path
 
-## Category-wise Sale Register
+Upload / place file here on server:
 
-- `sale/category_wise_sale_register.php`
-- `reports/category_wise_sale_register.php` (same file)
+```
+/selfimage/sale/category-wise-sale-register.php
+```
 
-Closes client gaps vs offline **Category-wise Sale Register**: missing filters, filter search, full grouping options, offline columns (Central/Local/Exempted Amt, Qty/Gross Cont%), multi-page CSV/Excel/PDF export, and browser print/zoom.
+Open:
 
-See `reports/README.md` for details.
+```
+https://liveraho.in/selfimage/sale/category-wise-sale-register.php
+```
+
+Source in this repo:
+
+```
+sale/category-wise-sale-register.php
+```
+
+See `reports/README.md` for query / filter notes.
