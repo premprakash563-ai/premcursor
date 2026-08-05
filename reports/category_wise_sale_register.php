@@ -3,8 +3,10 @@
  * Category-wise Sale Register
  * Place as: sale/category_wise_sale_register.php
  *
- * Offline parity: multi-level grouping, party/supplier/customer filters,
- * Central/Local/Exempted Amt, Qty/Gross Cont%, full-dataset export & print.
+ * Query engine mirrors original .NET Category-wise Sale Register:
+ *   UNION ALL Sale (Type.Status=4) + Sale Return (Status=5, negated)
+ *   Disc / Tot_Amt / Central|Local|Exempted from Stock.Tax_YN + SBill1.Disc
+ * UI: multi filters, grouping, Cont%, full-dataset export & print.
  */
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
@@ -136,16 +138,18 @@ $saleRateTo     = esc($db, $filters['sale_rate_to']   ?? '');
 // ── Grouping (offline option set) ─────────────────────────────────────────────
 $groupingOptions = [
     ''              => '— None —',
+    // Official .NET Ist–VIth list
+    'ProductGroup'  => 'Product Group',
     'Category'      => 'Category',
-    'City'          => 'City',
-    'Color'         => 'Color',
-    'CompProdCode'  => 'Comp.Prod.Code',
     'Company'       => 'Company',
-    'CompanyNo'     => 'Company No',
+    'Color'         => 'Color',
     'Description'   => 'Description',
+    'CompanyNo'     => 'Company No',
+    // Extended (same join set as .NET query)
+    'City'          => 'City',
+    'CompProdCode'  => 'Comp.Prod.Code',
     'Party'         => 'Party',
     'ProductCode'   => 'Product Code',
-    'ProductGroup'  => 'Product Group',
     'PurGst'        => 'Pur Gst %',
     'PurchaseRate'  => 'Purchase Rate',
     'ReferenceDate' => 'Reference Date',
@@ -246,7 +250,10 @@ $ddCompany     = safeQuery($db, "SELECT Comp_code, comp_name FROM compdetail ORD
 $ddSizeAll     = safeQuery($db, "SELECT s.s_code, s.s_name, s.cat_code FROM sizemaster s ORDER BY s.s_name");
 $ddSizeCats    = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN sizemaster s ON s.cat_code = c.C_code ORDER BY c.c_name");
 $ddColor       = safeQuery($db, "SELECT Color_code, Color_name FROM color ORDER BY Color_name");
-$ddDescription = safeQuery($db, "SELECT DISTINCT PRODUCT_NAME FROM product WHERE IFNULL(PRODUCT_NAME,'') <> '' ORDER BY PRODUCT_NAME");
+$ddDescription = safeQuery($db, "SELECT Des_Name, Des_Code FROM description ORDER BY Des_Name");
+if (empty($ddDescription)) {
+    $ddDescription = safeQuery($db, "SELECT DISTINCT PRODUCT_NAME AS Des_Name, PRODUCT_NAME AS Des_Code FROM product WHERE IFNULL(PRODUCT_NAME,'') <> '' ORDER BY PRODUCT_NAME");
+}
 $ddSpInst1All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst i ORDER BY i.s_name");
 $ddSpInst1Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst i ON i.cat_code = c.C_code ORDER BY c.c_name");
 $ddSpInst2All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst1 i ORDER BY i.s_name");
@@ -254,7 +261,10 @@ $ddSpInst2Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM categor
 $ddSpInst3All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst2 i ORDER BY i.s_name");
 $ddSpInst3Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst2 i ON i.cat_code = c.C_code ORDER BY c.c_name");
 $ddProduct     = safeQuery($db, "SELECT PRODUCT_CODE, PRODUCT_NAME, CONCAT(PRODUCT_CODE, ' - ', IFNULL(PRODUCT_NAME,'')) AS display FROM product ORDER BY PRODUCT_NAME LIMIT 8000");
-$ddCompNo      = safeQuery($db, "SELECT DISTINCT comp_no FROM product WHERE IFNULL(comp_no,'') <> '' ORDER BY comp_no");
+$ddCompNo      = safeQuery($db, "SELECT Comp_No AS comp_no FROM product WHERE IFNULL(Comp_No,'') <> '' GROUP BY Comp_No ORDER BY Comp_No");
+if (empty($ddCompNo)) {
+    $ddCompNo = safeQuery($db, "SELECT DISTINCT comp_no FROM product WHERE IFNULL(comp_no,'') <> '' ORDER BY comp_no");
+}
 $ddProdGroup   = safeQuery($db, "SELECT ProdGroup_Code, ProdGroup_Name FROM productgroup ORDER BY ProdGroup_Name");
 
 $ddType = safeQuery($db, "SELECT V_TYPE, IFNULL(V_Name, V_TYPE) AS V_Name FROM type WHERE STATUS IN (4,5) ORDER BY V_Name");
@@ -296,262 +306,358 @@ $ddComputer = safeQuery($db, "SELECT DISTINCT IFNULL(Computer, IFNULL(Comp_Name,
 $ddUser = safeQuery($db, "SELECT DISTINCT IFNULL(UserName, IFNULL(User_Name, IFNULL(`User`,''))) AS name FROM sbill1 WHERE IFNULL(UserName, IFNULL(User_Name, IFNULL(`User`,''))) <> '' ORDER BY name");
 if (empty($ddUser)) $ddUser = safeQuery($db, "SELECT UserName AS name FROM users ORDER BY UserName");
 
-// ── Group column map ──────────────────────────────────────────────────────────
+// ── Group column map (.NET UPPER/LTRIM/RTRIM style) ─────────────────────────
+// Official Ist–VIth values: Product Group, Category, Company, Color, Description, Company No
+// Extra keys kept for client filter/grouping requests; expressions use same joins as .NET.
+$norm = function ($expr) {
+    return "UPPER(LTRIM(RTRIM(IFNULL($expr,''))))";
+};
+
+// Column helpers tolerant of MySQL naming used by this app
+$totAmtExpr   = "IFNULL(st.Tot_Amt, IFNULL(st.TOT_AMT, IFNULL(st.TOT_AMOUNT,0)))";
+$totAmountExpr = "IFNULL(st.Tot_Amount, IFNULL(st.TOT_AMOUNT,0))";
+$sdiscExpr    = "IFNULL(st.SDisc_Amt, IFNULL(st.SDISC_AMT,0))";
+$billDiscExpr = "IFNULL(sb.Disc,0)";
+$taxAmtExpr   = "IFNULL(st.Tax_Amt, IFNULL(st.TAX_AMT,0))";
+$ssatExpr     = "IFNULL(st.SSat_Amt, IFNULL(st.SSAT_AMT,0))";
+$stockTaxYn   = "IFNULL(st.Tax_YN, IFNULL(st.TAX_YN,'N'))";
+$billTaxYn    = "IFNULL(sb.TAX_YN,'N')";
+// Net after bill-header discount (matches .NET Tot_Amt formula)
+$netTotExpr   = "($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))";
+// Disc amt = line disc + bill disc portion (matches .NET SDisc_Amt algebra)
+$discAmtExpr  = "($sdiscExpr + ($totAmtExpr - ($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))))";
+
 $groupColMap = [
-    'Category'      => "IFNULL(c.c_name,'')",
-    'City'          => "IFNULL(cm.City_Name,'')",
-    'Color'         => "IFNULL(col.Color_name,'')",
-    'CompProdCode'  => "IFNULL(p.CompProdCode,'')",
-    'Company'       => "IFNULL(cd.comp_name,'')",
-    'CompanyNo'     => "IFNULL(p.comp_no,'')",
-    'Description'   => "IFNULL(p.PRODUCT_NAME,'')",
-    'Party'         => "IFNULL(party.Sub_Name,'')",
-    'ProductCode'   => "IFNULL(p.PRODUCT_CODE,'')",
-    'ProductGroup'  => "IFNULL(pg.ProdGroup_Name,'')",
+    'ProductGroup'  => $norm('pg.ProdGroup_Name'),
+    'Category'      => $norm('c.c_name'),
+    'Company'       => $norm('cd.comp_name'),
+    'Color'         => $norm('col.Color_name'),
+    'Description'   => $norm("IFNULL(des.Des_Name, p.PRODUCT_NAME)"),
+    'CompanyNo'     => $norm('p.comp_no'),
+    // extended (same joins as .NET query)
+    'City'          => $norm('cm.City_Name'),
+    'CompProdCode'  => $norm('p.CompProdCode'),
+    'Party'         => $norm('party.Sub_Name'),
+    'ProductCode'   => $norm('p.PRODUCT_CODE'),
     'PurGst'        => "CAST(ROUND(IFNULL(p.PTax, IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))),2) AS CHAR)",
     'PurchaseRate'  => "CAST(ROUND(IFNULL(p.PRate, IFNULL(p.Pur_Rate,0)),2) AS CHAR)",
     'ReferenceDate' => "IFNULL(DATE_FORMAT(IFNULL(sb.Ref_Date, IFNULL(sb.RefDate, p.RefDate)), '%Y-%m-%d'),'')",
     'ReferenceNo'   => "IFNULL(sb.Ref_No, IFNULL(sb.RefNo, IFNULL(p.RefNo,'')))",
     'SaleGst'       => "CAST(ROUND(IFNULL(p.Tax,0)+IFNULL(p.SSat_Per,0),2) AS CHAR)",
     'SaleRate'      => "CAST(ROUND(IFNULL(st.AMOUNT/NULLIF(st.QTY,0),0),2) AS CHAR)",
-    'Size'          => "IFNULL(sm.s_name,'')",
-    'SpInst1'       => "IFNULL(si1.s_name,'')",
-    'SpInst2'       => "IFNULL(si2.s_name,'')",
-    'SpInst3'       => "IFNULL(si3.s_name,'')",
+    'Size'          => $norm('sm.s_name'),
+    'SpInst1'       => $norm('si1.s_name'),
+    'SpInst2'       => $norm('si2.s_name'),
+    'SpInst3'       => $norm('si3.s_name'),
     'StockRate'     => "CAST(ROUND(IFNULL(p.SRate, IFNULL(p.Stock_Rate,0)),2) AS CHAR)",
 ];
 
+// Always expose Grp1..Grp6 like .NET (empty string when unused)
+$grpSqlParts = [];
+$grpByParts  = [];
 $activeGroups = [];
-foreach ($grp as $lvl => $g) {
-    if ($g && isset($groupColMap[$g])) {
-        $activeGroups[] = ['level' => $lvl, 'name' => $g, 'col' => $groupColMap[$g], 'label' => $groupingOptions[$g]];
+for ($i = 1; $i <= 6; $i++) {
+    $key = $grp[$i];
+    if ($key !== '' && isset($groupColMap[$key])) {
+        $expr = $groupColMap[$key];
+        $grpSqlParts[] = "$expr AS g" . ($i - 1);
+        $grpByParts[]  = $expr;
+        $activeGroups[] = ['level' => $i, 'name' => $key, 'col' => $expr, 'label' => $groupingOptions[$key]];
+    } else {
+        $grpSqlParts[] = "'' AS g" . ($i - 1);
     }
 }
 if (empty($activeGroups)) {
-    $activeGroups[] = ['level' => 1, 'name' => 'Category', 'col' => $groupColMap['Category'], 'label' => 'Category'];
+    $expr = $groupColMap['Category'];
+    $grpSqlParts[0] = "$expr AS g0";
+    $grpByParts = [$expr];
+    $activeGroups[] = ['level' => 1, 'name' => 'Category', 'col' => $expr, 'label' => 'Category'];
 }
-$groupCols = array_map(fn($g) => $g['col'], $activeGroups);
-$numGroupLevels = count($activeGroups);
-
-$grpSelectParts = [];
-foreach ($activeGroups as $i => $g) {
-    $grpSelectParts[] = $g['col'] . " AS g$i";
-}
-$grpSelectSql = implode(",\n            ", $grpSelectParts);
+$grpSelectSql = implode(",\n            ", $grpSqlParts);
+$groupCols    = $grpByParts; // only non-empty for GROUP BY
 $groupBySql   = implode(', ', $groupCols);
-$orderBySql   = implode(', ', array_map(fn($i) => "g$i", range(0, $numGroupLevels - 1)));
+$numGroupLevels = count($activeGroups);
+$orderBySql   = implode(', ', array_map(function ($i) { return 'g' . $i; }, range(0, 5)));
 
-// ── WHERE ─────────────────────────────────────────────────────────────────────
-$where = "st.V_DATE BETWEEN '$from' AND '$to'";
+// ── WHERE (shared; Type.Status applied per UNION leg) ─────────────────────────
+$whereParts = ["st.V_DATE >= '$from'", "st.V_DATE <= '$to'"];
 
 if ($tabType === 'select' && !empty($selType)) {
-    $where .= " AND st.V_TYPE IN (" . inListSql($db, $selType) . ")";
+    $whereParts[] = 'st.V_TYPE IN (' . inListSql($db, $selType) . ')';
 }
 if ($tabParty === 'select') {
-    if ($selPartyAcg !== '') $where .= " AND sb.Code = '$selPartyAcg'";
-    if (!empty($selParty)) $where .= " AND party.Sub_Name IN (" . inListSql($db, $selParty) . ")";
+    if ($selPartyAcg !== '') $whereParts[] = "sb.Code = '$selPartyAcg'";
+    if (!empty($selParty)) $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selParty) . ')';
 }
 if ($tabSupplier === 'select') {
-    if ($selSuppAcg !== '') $where .= " AND IFNULL(p.Code, IFNULL(p.GROUP_CODE,'')) = '$selSuppAcg'";
-    if (!empty($selSupplier)) $where .= " AND IFNULL(supp.Sub_Name, cd.comp_name) IN (" . inListSql($db, $selSupplier) . ")";
+    if ($selSuppAcg !== '') $whereParts[] = "IFNULL(p.Code, IFNULL(p.GROUP_CODE,'')) = '$selSuppAcg'";
+    if (!empty($selSupplier)) $whereParts[] = 'IFNULL(supp.Sub_Name, cd.comp_name) IN (' . inListSql($db, $selSupplier) . ')';
 }
 if ($tabCustomer === 'select' && !empty($selCustomer)) {
-    $where .= " AND party.Sub_Name IN (" . inListSql($db, $selCustomer) . ")";
+    $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selCustomer) . ')';
 }
 if ($tabTransport === 'select' && !empty($selTransport)) {
-    $where .= " AND IFNULL(sb.Transport, IFNULL(sb.Trans_Name,'')) IN (" . inListSql($db, $selTransport) . ")";
+    $whereParts[] = "IFNULL(sb.Transport, IFNULL(sb.Trans_Name,'')) IN (" . inListSql($db, $selTransport) . ")";
 }
 if ($tabRefNo === 'select' && !empty($selRefNo)) {
-    $where .= " AND IFNULL(sb.Ref_No, IFNULL(sb.RefNo, IFNULL(p.RefNo,''))) IN (" . inListSql($db, $selRefNo) . ")";
+    $whereParts[] = "IFNULL(sb.Ref_No, IFNULL(sb.RefNo, IFNULL(p.RefNo,''))) IN (" . inListSql($db, $selRefNo) . ")";
 }
 if ($tabSaleGst === 'select' && !empty($selSaleGst)) {
-    $where .= " AND CAST(ROUND(IFNULL(p.Tax,0)+IFNULL(p.SSat_Per,0),2) AS CHAR) IN (" . inListSql($db, $selSaleGst) . ")";
+    $whereParts[] = 'CAST(ROUND(IFNULL(p.Tax,0)+IFNULL(p.SSat_Per,0),2) AS CHAR) IN (' . inListSql($db, $selSaleGst) . ')';
 }
 if ($tabCity === 'select' && !empty($selCity)) {
-    $where .= " AND cm.City_Name IN (" . inListSql($db, $selCity) . ")";
+    $whereParts[] = 'cm.City_Name IN (' . inListSql($db, $selCity) . ')';
 }
 if ($tabState === 'select' && !empty($selState)) {
-    $where .= " AND IFNULL(stt.State_Name, stt.State_Code) IN (" . inListSql($db, $selState) . ")";
+    $whereParts[] = 'IFNULL(stt.State_Name, stt.State_Code) IN (' . inListSql($db, $selState) . ')';
 }
 if ($tabRep === 'select' && !empty($selRep)) {
-    $where .= " AND rp.Rp_Name IN (" . inListSql($db, $selRep) . ")";
+    $whereParts[] = 'rp.Rp_Name IN (' . inListSql($db, $selRep) . ')';
 }
 if ($tabBank === 'select') {
-    if (!empty($selBankAc)) $where .= " AND sb.Bank_Code IN (" . inListSql($db, $selBankAc) . ")";
-    if (!empty($selBankSub)) $where .= " AND bank.Sub_Name IN (" . inListSql($db, $selBankSub) . ")";
+    if (!empty($selBankAc)) $whereParts[] = 'sb.Bank_Code IN (' . inListSql($db, $selBankAc) . ')';
+    if (!empty($selBankSub)) $whereParts[] = 'bank.Sub_Name IN (' . inListSql($db, $selBankSub) . ')';
 }
 if ($tabWallet === 'select') {
-    if (!empty($selWalletAc)) $where .= " AND sb.Wallet_Code IN (" . inListSql($db, $selWalletAc) . ")";
-    if (!empty($selWalletSub)) $where .= " AND wallet.Sub_Name IN (" . inListSql($db, $selWalletSub) . ")";
+    if (!empty($selWalletAc)) $whereParts[] = 'sb.Wallet_Code IN (' . inListSql($db, $selWalletAc) . ')';
+    if (!empty($selWalletSub)) $whereParts[] = 'wallet.Sub_Name IN (' . inListSql($db, $selWalletSub) . ')';
 }
 if ($tabUnit === 'select' && !empty($selUnit)) {
-    $where .= " AND IFNULL(p.Unit, IFNULL(p.Unit_Code,'')) IN (" . inListSql($db, $selUnit) . ")";
+    $whereParts[] = "IFNULL(p.Unit, IFNULL(p.Unit_Code,'')) IN (" . inListSql($db, $selUnit) . ")";
 }
 if ($tabComputer === 'select' && !empty($selComputer)) {
     $compExpr = null;
     foreach (['Computer','Comp_Name','Machine'] as $col) {
         if (columnExists($db, 'sbill1', $col)) { $compExpr = "IFNULL(sb.`$col`,'')"; break; }
     }
-    if ($compExpr) $where .= " AND $compExpr IN (" . inListSql($db, $selComputer) . ")";
+    if ($compExpr) $whereParts[] = "$compExpr IN (" . inListSql($db, $selComputer) . ")";
 }
 if ($tabUser === 'select' && !empty($selUser)) {
     $userExpr = null;
     foreach (['UserName','User_Name','User'] as $col) {
         if (columnExists($db, 'sbill1', $col)) { $userExpr = "IFNULL(sb.`$col`,'')"; break; }
     }
-    if ($userExpr) $where .= " AND $userExpr IN (" . inListSql($db, $selUser) . ")";
+    if ($userExpr) $whereParts[] = "$userExpr IN (" . inListSql($db, $selUser) . ")";
 }
 if ($tabPurGst === 'select' && !empty($selPurGst)) {
-    $where .= " AND CAST(ROUND(IFNULL(p.PTax, IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))),2) AS CHAR) IN (" . inListSql($db, $selPurGst) . ")";
+    $whereParts[] = 'CAST(ROUND(IFNULL(p.PTax, IFNULL(p.Pur_Tax, IFNULL(p.Tax,0))),2) AS CHAR) IN (' . inListSql($db, $selPurGst) . ')';
 }
-
 if ($tabCategory === 'select' && !empty($selCategory)) {
-    $where .= " AND c.c_name IN (" . inListSql($db, $selCategory) . ")";
+    $whereParts[] = 'c.c_name IN (' . inListSql($db, $selCategory) . ')';
 }
 if ($tabCompany === 'select' && !empty($selCompany)) {
-    $where .= " AND cd.comp_name IN (" . inListSql($db, $selCompany) . ")";
+    $whereParts[] = 'cd.comp_name IN (' . inListSql($db, $selCompany) . ')';
 }
 if ($tabSize === 'select') {
-    if (!empty($selSize)) $where .= " AND sm.s_name IN (" . inListSql($db, $selSize) . ")";
-    elseif ($selSizeCat !== '') $where .= " AND sm.cat_code = '$selSizeCat'";
+    if (!empty($selSize)) $whereParts[] = 'sm.s_name IN (' . inListSql($db, $selSize) . ')';
+    elseif ($selSizeCat !== '') $whereParts[] = "sm.cat_code = '$selSizeCat'";
 }
 if ($tabColor === 'select' && !empty($selColor)) {
-    $where .= " AND col.Color_name IN (" . inListSql($db, $selColor) . ")";
+    $whereParts[] = 'col.Color_name IN (' . inListSql($db, $selColor) . ')';
 }
 if ($tabDesc === 'select' && !empty($selDesc)) {
-    $where .= " AND p.PRODUCT_NAME IN (" . inListSql($db, $selDesc) . ")";
+    $whereParts[] = "IFNULL(des.Des_Name, p.PRODUCT_NAME) IN (" . inListSql($db, $selDesc) . ")";
 }
 if ($tabSpInst1 === 'select') {
-    if (!empty($selSpInst1)) $where .= " AND si1.s_name IN (" . inListSql($db, $selSpInst1) . ")";
-    elseif ($selSpInst1Cat !== '') $where .= " AND si1.cat_code = '$selSpInst1Cat'";
+    if (!empty($selSpInst1)) $whereParts[] = 'si1.s_name IN (' . inListSql($db, $selSpInst1) . ')';
+    elseif ($selSpInst1Cat !== '') $whereParts[] = "si1.cat_code = '$selSpInst1Cat'";
 }
 if ($tabSpInst2 === 'select') {
-    if (!empty($selSpInst2)) $where .= " AND si2.s_name IN (" . inListSql($db, $selSpInst2) . ")";
-    elseif ($selSpInst2Cat !== '') $where .= " AND si2.cat_code = '$selSpInst2Cat'";
+    if (!empty($selSpInst2)) $whereParts[] = 'si2.s_name IN (' . inListSql($db, $selSpInst2) . ')';
+    elseif ($selSpInst2Cat !== '') $whereParts[] = "si2.cat_code = '$selSpInst2Cat'";
 }
 if ($tabSpInst3 === 'select') {
-    if (!empty($selSpInst3)) $where .= " AND si3.s_name IN (" . inListSql($db, $selSpInst3) . ")";
-    elseif ($selSpInst3Cat !== '') $where .= " AND si3.cat_code = '$selSpInst3Cat'";
+    if (!empty($selSpInst3)) $whereParts[] = 'si3.s_name IN (' . inListSql($db, $selSpInst3) . ')';
+    elseif ($selSpInst3Cat !== '') $whereParts[] = "si3.cat_code = '$selSpInst3Cat'";
 }
 if ($tabProduct === 'select' && !empty($selProduct)) {
-    $where .= " AND p.PRODUCT_CODE IN (" . inListSql($db, $selProduct) . ")";
+    $whereParts[] = 'p.PRODUCT_CODE IN (' . inListSql($db, $selProduct) . ')';
 }
 if ($tabCompNo === 'select' && !empty($selCompNo)) {
-    $where .= " AND p.comp_no IN (" . inListSql($db, $selCompNo) . ")";
+    $whereParts[] = 'p.comp_no IN (' . inListSql($db, $selCompNo) . ')';
 }
 if ($tabProdGroup === 'select' && !empty($selProdGroup)) {
-    $where .= " AND pg.ProdGroup_Name IN (" . inListSql($db, $selProdGroup) . ")";
+    $whereParts[] = 'pg.ProdGroup_Name IN (' . inListSql($db, $selProdGroup) . ')';
 }
 
-if ($gstnFilter === 'with')    $where .= " AND IFNULL(sb.TAX_YN,'N')='Y'";
-if ($gstnFilter === 'without') $where .= " AND IFNULL(sb.TAX_YN,'N')<>'Y'";
-if ($typeFilter === 'local')    $where .= " AND IFNULL(sb.TAX_YN,'N')<>'Y'";
-if ($typeFilter === 'central')  $where .= " AND IFNULL(sb.TAX_YN,'N')='Y'";
-if ($typeFilter === 'exempted') $where .= " AND IFNULL(st.TAX_AMT,0)=0 AND IFNULL(st.SSAT_AMT,0)=0";
-if ($onlySaleReturn) $where .= " AND ty.STATUS=5";
-if ($onlyDiscount)   $where .= " AND IFNULL(st.SDISC_AMT,0)>0";
-if ($saleRateFrom !== '') $where .= " AND (st.AMOUNT/NULLIF(st.QTY,0)) >= '$saleRateFrom'";
-if ($saleRateTo   !== '') $where .= " AND (st.AMOUNT/NULLIF(st.QTY,0)) <= '$saleRateTo'";
+// GSTIN uses SBill1.TAX_YN (bill header) — same as .NET CGST/IGST split source
+if ($gstnFilter === 'with')    $whereParts[] = "$billTaxYn='Y'";
+if ($gstnFilter === 'without') $whereParts[] = "$billTaxYn<>'Y'";
+// Tax Type All/Local/Central/Exempted uses Stock.Tax_YN (Y/N/F) like Central/Local/Exempted Amt
+if ($typeFilter === 'local')    $whereParts[] = "$stockTaxYn='N'";
+if ($typeFilter === 'central')  $whereParts[] = "$stockTaxYn='Y'";
+if ($typeFilter === 'exempted') $whereParts[] = "$stockTaxYn='F'";
+if ($onlyDiscount)   $whereParts[] = "($discAmtExpr) > 0";
+if ($saleRateFrom !== '') $whereParts[] = "(st.AMOUNT/NULLIF(st.QTY,0)) >= '$saleRateFrom'";
+if ($saleRateTo   !== '') $whereParts[] = "(st.AMOUNT/NULLIF(st.QTY,0)) <= '$saleRateTo'";
 
-// ── Aggregate + joins ─────────────────────────────────────────────────────────
-$AGG_SELECT = "
-            SUM(CASE WHEN ty.STATUS=4 THEN st.QTY ELSE -st.QTY END) AS Qty,
-            SUM(CASE WHEN ty.STATUS=4 THEN st.AMOUNT ELSE -st.AMOUNT END) AS Amount,
-            SUM(CASE WHEN ty.STATUS=4 THEN IFNULL(st.SDISC_AMT,0) ELSE -IFNULL(st.SDISC_AMT,0) END) AS DiscAmt,
-            SUM(CASE WHEN ty.STATUS=4 THEN IFNULL(st.TOT_AMOUNT,0) ELSE -IFNULL(st.TOT_AMOUNT,0) END) AS TaxableAmt,
-            SUM(CASE WHEN ty.STATUS=4 THEN IFNULL(st.TOT_AMOUNT, IFNULL(st.AMOUNT,0)) ELSE -IFNULL(st.TOT_AMOUNT, IFNULL(st.AMOUNT,0)) END) AS GrossAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' THEN IFNULL(st.TAX_AMT,0) ELSE 0 END
-                     ELSE -CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' THEN IFNULL(st.TAX_AMT,0) ELSE 0 END END) AS CGSTAmt,
-            SUM(CASE WHEN ty.STATUS=4 THEN IFNULL(st.SSAT_AMT,0) ELSE -IFNULL(st.SSAT_AMT,0) END) AS SGSTAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN IFNULL(st.TAX_AMT,0) ELSE 0 END
-                     ELSE -CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN IFNULL(st.TAX_AMT,0) ELSE 0 END END) AS IGSTAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END
-                     ELSE -CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END END) AS CentralAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' AND (IFNULL(st.TAX_AMT,0)+IFNULL(st.SSAT_AMT,0))>0 THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END
-                     ELSE -CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' AND (IFNULL(st.TAX_AMT,0)+IFNULL(st.SSAT_AMT,0))>0 THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END END) AS LocalAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN CASE WHEN IFNULL(st.TAX_AMT,0)=0 AND IFNULL(st.SSAT_AMT,0)=0 THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END
-                     ELSE -CASE WHEN IFNULL(st.TAX_AMT,0)=0 AND IFNULL(st.SSAT_AMT,0)=0 THEN IFNULL(st.TOT_AMOUNT,0) ELSE 0 END END) AS ExemptedAmt,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN FLOOR(CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN st.QTY ELSE 0 END)
-                     ELSE -FLOOR(CASE WHEN IFNULL(sb.TAX_YN,'N')='Y' THEN st.QTY ELSE 0 END) END) AS CentralQty,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN FLOOR(CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' AND (IFNULL(st.TAX_AMT,0)+IFNULL(st.SSAT_AMT,0))>0 THEN st.QTY ELSE 0 END)
-                     ELSE -FLOOR(CASE WHEN IFNULL(sb.TAX_YN,'N')<>'Y' AND (IFNULL(st.TAX_AMT,0)+IFNULL(st.SSAT_AMT,0))>0 THEN st.QTY ELSE 0 END) END) AS LocalQty,
-            SUM(CASE WHEN ty.STATUS=4
-                     THEN FLOOR(CASE WHEN IFNULL(st.TAX_AMT,0)=0 AND IFNULL(st.SSAT_AMT,0)=0 THEN st.QTY ELSE 0 END)
-                     ELSE -FLOOR(CASE WHEN IFNULL(st.TAX_AMT,0)=0 AND IFNULL(st.SSAT_AMT,0)=0 THEN st.QTY ELSE 0 END) END) AS ExemptedQty";
+$whereCommon = implode(' AND ', $whereParts);
 
+// ── Aggregates (.NET formulas; sign applied per UNION leg) ─────────────────────
+$AGG_POS = "
+            IFNULL(SUM(st.QTY),0) AS Qty,
+            IFNULL(SUM(st.AMOUNT),0) AS Amount,
+            IFNULL(SUM($discAmtExpr),0) AS DiscAmt,
+            IFNULL(SUM($totAmountExpr),0) AS TaxableAmt,
+            IFNULL(SUM($netTotExpr),0) AS GrossAmt,
+            IFNULL(SUM(CASE WHEN $billTaxYn = 'N' THEN $taxAmtExpr ELSE 0 END),0) AS CGSTAmt,
+            IFNULL(SUM($ssatExpr),0) AS SGSTAmt,
+            IFNULL(SUM(CASE WHEN $billTaxYn = 'Y' THEN $taxAmtExpr ELSE 0 END),0) AS IGSTAmt,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'Y' THEN ($netTotExpr) ELSE 0 END),0) AS CentralAmt,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'N' THEN ($netTotExpr) ELSE 0 END),0) AS LocalAmt,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'F' THEN ($netTotExpr) ELSE 0 END),0) AS ExemptedAmt,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'Y' THEN st.QTY ELSE 0 END),0) AS CentralQty,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'N' THEN st.QTY ELSE 0 END),0) AS LocalQty,
+            IFNULL(SUM(CASE WHEN $stockTaxYn = 'F' THEN st.QTY ELSE 0 END),0) AS ExemptedQty";
+
+$AGG_NEG = "
+            -IFNULL(SUM(st.QTY),0) AS Qty,
+            -IFNULL(SUM(st.AMOUNT),0) AS Amount,
+            -IFNULL(SUM($discAmtExpr),0) AS DiscAmt,
+            -IFNULL(SUM($totAmountExpr),0) AS TaxableAmt,
+            -IFNULL(SUM($netTotExpr),0) AS GrossAmt,
+            -IFNULL(SUM(CASE WHEN $billTaxYn = 'N' THEN $taxAmtExpr ELSE 0 END),0) AS CGSTAmt,
+            -IFNULL(SUM($ssatExpr),0) AS SGSTAmt,
+            -IFNULL(SUM(CASE WHEN $billTaxYn = 'Y' THEN $taxAmtExpr ELSE 0 END),0) AS IGSTAmt,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'Y' THEN ($netTotExpr) ELSE 0 END),0) AS CentralAmt,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'N' THEN ($netTotExpr) ELSE 0 END),0) AS LocalAmt,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'F' THEN ($netTotExpr) ELSE 0 END),0) AS ExemptedAmt,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'Y' THEN st.QTY ELSE 0 END),0) AS CentralQty,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'N' THEN st.QTY ELSE 0 END),0) AS LocalQty,
+            -IFNULL(SUM(CASE WHEN $stockTaxYn = 'F' THEN st.QTY ELSE 0 END),0) AS ExemptedQty";
+
+// Joins mirror .NET query (SBill1 → Stock → masters)
 $FROM_JOINS = "
-        FROM stock st
-        LEFT JOIN type         ty    ON ty.V_TYPE = st.V_TYPE
-        LEFT JOIN sbill1       sb    ON sb.V_TYPE = st.V_TYPE AND sb.V_NO = st.V_NO
-        LEFT JOIN product      p     ON p.PRODUCT_CODE = st.PROD_CODE
-        LEFT JOIN category     c     ON c.C_code = p.CAT_CODE
-        LEFT JOIN productgroup pg    ON pg.ProdGroup_Code = p.ProdGroup_Code
-        LEFT JOIN compdetail   cd    ON cd.Comp_code = p.COMP_CODE
-        LEFT JOIN color        col   ON col.Color_code = p.COLOR_CODE
-        LEFT JOIN sizemaster   sm    ON sm.s_code = p.SIZE_CODE
-        LEFT JOIN specialinst  si1   ON si1.s_code = p.INST1_CODE
-        LEFT JOIN specialinst1 si2   ON si2.s_code = p.INST2_CODE
-        LEFT JOIN specialinst2 si3   ON si3.s_code = p.INST3_CODE";
+        FROM sbill1 sb
+        LEFT JOIN stock st ON st.V_TYPE = sb.V_TYPE AND st.V_NO = sb.V_NO
+        LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE
+        LEFT JOIN product p ON st.PROD_CODE = p.PRODUCT_CODE
+        LEFT JOIN productgroup pg ON p.ProdGroup_Code = pg.ProdGroup_Code
+        LEFT JOIN compdetail cd ON p.COMP_CODE = cd.Comp_code
+        LEFT JOIN category c ON p.CAT_CODE = c.C_code
+        LEFT JOIN color col ON p.COLOR_CODE = col.Color_code
+        LEFT JOIN sizemaster sm ON p.SIZE_CODE = sm.s_code
+        LEFT JOIN specialinst si1 ON p.INST1_CODE = si1.s_code
+        LEFT JOIN specialinst1 si2 ON p.INST2_CODE = si2.s_code
+        LEFT JOIN specialinst2 si3 ON p.INST3_CODE = si3.s_code";
+
+if (tableExists($db, 'description')) {
+    $descCol = columnExists($db, 'product', 'Desc_Code') ? 'Desc_Code' : (columnExists($db, 'product', 'DESC_CODE') ? 'DESC_CODE' : '');
+    if ($descCol !== '') {
+        $FROM_JOINS .= "\n        LEFT JOIN description des ON p.`$descCol` = des.Des_Code";
+    } else {
+        $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS Des_Code, '' AS Des_Name) des ON 1=0";
+    }
+} else {
+    $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS Des_Code, '' AS Des_Name) des ON 1=0";
+}
+if (tableExists($db, 'acgroup')) {
+    $FROM_JOINS .= "\n        LEFT JOIN acgroup ag ON sb.Code = ag.Code";
+    $FROM_JOINS .= "\n        LEFT JOIN acgroup ag1 ON p.Code = ag1.Code";
+}
 if (tableExists($db, 'subgroup')) {
     $FROM_JOINS .= "
-        LEFT JOIN subgroup     party ON party.Group_Code = sb.Code AND party.SubCode = sb.SubCode
-        LEFT JOIN subgroup     supp  ON supp.SubCode = p.Subcode AND supp.Group_Code = p.Code
-        LEFT JOIN subgroup     bank  ON bank.SubCode = sb.Bank_Code
-        LEFT JOIN subgroup     wallet ON wallet.Group_Code = sb.Wallet_Code AND wallet.SubCode = sb.Wallet_SubCode";
+        LEFT JOIN subgroup party ON sb.Code = party.Group_Code AND sb.SubCode = party.SubCode
+        LEFT JOIN subgroup supp ON supp.SubCode = p.Subcode AND supp.Group_Code = p.Code
+        LEFT JOIN subgroup bank ON sb.Bank_Code = bank.SubCode
+        LEFT JOIN subgroup wallet ON sb.Wallet_Code = wallet.Group_Code AND sb.Wallet_SubCode = wallet.SubCode";
 } else {
     $FROM_JOINS .= "
         LEFT JOIN (SELECT '' AS Group_Code, '' AS SubCode, '' AS Sub_Name, '' AS City_Code) party ON 1=0
-        LEFT JOIN (SELECT '' AS Group_Code, '' AS SubCode, '' AS Sub_Name) supp ON 1=0
+        LEFT JOIN (SELECT '' AS Group_Code, '' AS SubCode, '' AS Sub_Name, '' AS City_Code) supp ON 1=0
         LEFT JOIN (SELECT '' AS SubCode, '' AS Sub_Name) bank ON 1=0
         LEFT JOIN (SELECT '' AS Group_Code, '' AS SubCode, '' AS Sub_Name) wallet ON 1=0";
 }
+// City via Product's Subgroup_1 (matches .NET CityMaster join)
 if (tableExists($db, 'citymaster')) {
-    $FROM_JOINS .= "\n        LEFT JOIN citymaster   cm    ON cm.City_Code = party.City_Code";
+    $FROM_JOINS .= "\n        LEFT JOIN citymaster cm ON cm.City_Code = supp.City_Code";
 } elseif (tableExists($db, 'CityMaster')) {
-    $FROM_JOINS .= "\n        LEFT JOIN CityMaster   cm    ON cm.City_Code = party.City_Code";
+    $FROM_JOINS .= "\n        LEFT JOIN CityMaster cm ON cm.City_Code = supp.City_Code";
 } else {
     $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS City_Code, '' AS City_Name, '' AS State_Code) cm ON 1=0";
 }
 if (tableExists($db, 'state')) {
-    $FROM_JOINS .= "\n        LEFT JOIN state        stt   ON stt.State_Code = cm.State_Code";
+    $FROM_JOINS .= "\n        LEFT JOIN state stt ON stt.State_Code = cm.State_Code";
 } elseif (tableExists($db, 'State')) {
-    $FROM_JOINS .= "\n        LEFT JOIN State        stt   ON stt.State_Code = cm.State_Code";
+    $FROM_JOINS .= "\n        LEFT JOIN State stt ON stt.State_Code = cm.State_Code";
 } else {
     $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS State_Code, '' AS State_Name) stt ON 1=0";
 }
 if (tableExists($db, 'representative')) {
-    $FROM_JOINS .= "\n        LEFT JOIN representative rp  ON rp.Rp_Code = st.Rep_Code";
+    $FROM_JOINS .= "\n        LEFT JOIN representative rp ON st.Rep_Code = rp.Rp_Code";
 } else {
     $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS Rp_Code, '' AS Rp_Name) rp ON 1=0";
 }
 
-function buildMainSql($where, $grpSelectSql, $groupBySql, $orderBySql, $AGG, $FROM) {
+/**
+ * Build one UNION leg (.NET Status=4 positive / Status=5 negative).
+ */
+function buildLegSql($status, $agg, $grpSelectSql, $groupBySql, $whereCommon, $fromJoins) {
     return "
         SELECT
             $grpSelectSql,
-            $AGG
-        $FROM
-        WHERE ty.STATUS IN (4,5) AND $where
-        GROUP BY $groupBySql
+            $agg
+        $fromJoins
+        WHERE ty.STATUS = $status AND $whereCommon
+        GROUP BY $groupBySql";
+}
+
+function buildMainSql($onlySaleReturn, $grpSelectSql, $groupBySql, $orderBySql, $AGG_POS, $AGG_NEG, $whereCommon, $FROM_JOINS) {
+    $sale = buildLegSql(4, $AGG_POS, $grpSelectSql, $groupBySql, $whereCommon, $FROM_JOINS);
+    $ret  = buildLegSql(5, $AGG_NEG, $grpSelectSql, $groupBySql, $whereCommon, $FROM_JOINS);
+    if ($onlySaleReturn) {
+        $union = $ret;
+    } else {
+        $union = "($sale) UNION ALL ($ret)";
+    }
+    // Re-aggregate Grp buckets across UNION (same as summing both legs)
+    $gCols = [];
+    for ($i = 0; $i < 6; $i++) $gCols[] = "g$i";
+    $gSelect = implode(', ', $gCols);
+    $metrics = 'Qty,Amount,DiscAmt,TaxableAmt,GrossAmt,CGSTAmt,SGSTAmt,IGSTAmt,CentralAmt,LocalAmt,ExemptedAmt,CentralQty,LocalQty,ExemptedQty';
+    $sums = implode(', ', array_map(function ($m) { return "SUM($m) AS $m"; }, explode(',', $metrics)));
+    return "
+        SELECT $gSelect, $sums
+        FROM ($union) AS u
+        GROUP BY $gSelect
         ORDER BY $orderBySql ASC";
 }
-function buildSubtotalSql($where, $groupCols, $n, $AGG, $FROM) {
+
+/**
+ * $nActive = how many leading *active* groups to subtotal (1..numGroupLevels-1).
+ * Uses original Ist–VIth slots (g0..g5) so keys align with main query rows.
+ */
+function buildSubtotalSql($onlySaleReturn, $activeGroups, $nActive, $AGG_POS, $AGG_NEG, $whereCommon, $FROM_JOINS) {
     $cols = [];
-    for ($i = 0; $i < $n; $i++) $cols[] = $groupCols[$i] . " AS g$i";
+    $groupBy = [];
+    $outAliases = [];
+    for ($i = 0; $i < $nActive; $i++) {
+        $slot = (int)$activeGroups[$i]['level'] - 1; // 0..5
+        $expr = $activeGroups[$i]['col'];
+        $cols[] = "$expr AS g$slot";
+        $groupBy[] = $expr;
+        $outAliases[] = "g$slot";
+    }
     $selectCols = implode(', ', $cols);
-    $groupBy = implode(', ', array_slice($groupCols, 0, $n));
+    $groupBySql = implode(', ', $groupBy);
+    $sale = "
+        SELECT $selectCols, $AGG_POS
+        $FROM_JOINS
+        WHERE ty.STATUS = 4 AND $whereCommon
+        GROUP BY $groupBySql";
+    $ret = "
+        SELECT $selectCols, $AGG_NEG
+        $FROM_JOINS
+        WHERE ty.STATUS = 5 AND $whereCommon
+        GROUP BY $groupBySql";
+    $union = $onlySaleReturn ? $ret : "($sale) UNION ALL ($ret)";
+    $gSelect = implode(', ', $outAliases);
+    $metrics = ['Qty','Amount','DiscAmt','TaxableAmt','GrossAmt','CGSTAmt','SGSTAmt','IGSTAmt','CentralAmt','LocalAmt','ExemptedAmt','CentralQty','LocalQty','ExemptedQty'];
+    $sums = implode(', ', array_map(function ($m) { return "SUM($m) AS $m"; }, $metrics));
     return "
-        SELECT $selectCols, $AGG
-        $FROM
-        WHERE ty.STATUS IN (4,5) AND $where
-        GROUP BY $groupBy";
+        SELECT $gSelect, $sums
+        FROM ($union) AS u
+        GROUP BY $gSelect";
 }
 
 $metricKeys = ['Qty','Amount','DiscAmt','TaxableAmt','GrossAmt','CGSTAmt','SGSTAmt','IGSTAmt','CentralAmt','LocalAmt','ExemptedAmt','CentralQty','LocalQty','ExemptedQty'];
@@ -562,7 +668,7 @@ $subtotalLevelsToCompute = [];
 
 $mainSql = '';
 if ($hasFilters) {
-    $mainSql = buildMainSql($where, $grpSelectSql, $groupBySql, $orderBySql, $AGG_SELECT, $FROM_JOINS);
+    $mainSql = buildMainSql($onlySaleReturn, $grpSelectSql, $groupBySql, $orderBySql, $AGG_POS, $AGG_NEG, $whereCommon, $FROM_JOINS);
     $sumCols = implode(', ', array_map(fn($k) => "SUM($k) AS $k", $metricKeys));
     $tRes = @$db->query("SELECT COUNT(*) AS cnt, $sumCols FROM ($mainSql) AS T");
     if ($tRes) {
@@ -592,13 +698,16 @@ if ($hasFilters) {
         }
     }
     foreach ($subtotalLevelsToCompute as $n) {
-        $sql = buildSubtotalSql($where, $groupCols, $n, $AGG_SELECT, $FROM_JOINS);
+        $sql = buildSubtotalSql($onlySaleReturn, $activeGroups, $n, $AGG_POS, $AGG_NEG, $whereCommon, $FROM_JOINS);
         $res = @$db->query($sql);
         if ($res) {
             $map = [];
             while ($r = $res->fetch_assoc()) {
                 $keyParts = [];
-                for ($i = 0; $i < $n; $i++) $keyParts[] = (string)($r["g$i"] ?? '');
+                for ($i = 0; $i < $n; $i++) {
+                    $slot = (int)$activeGroups[$i]['level'] - 1;
+                    $keyParts[] = (string)($r["g$slot"] ?? '');
+                }
                 $map[implode("\x1F", $keyParts)] = $r;
             }
             $subtotals[$n] = $map;
@@ -652,7 +761,10 @@ if ($exportMode && $hasFilters && !$queryErr) {
         $payload = [];
         foreach ($rows as $idx => $r) {
             $gvals = [];
-            for ($i = 0; $i < $numGroupLevels; $i++) $gvals[] = (string)($r["g$i"] ?? '');
+            for ($i = 0; $i < $numGroupLevels; $i++) {
+                $slot = (int)$activeGroups[$i]['level'] - 1;
+                $gvals[] = (string)($r['g' . $slot] ?? '');
+            }
             $payload[] = array_merge(['groups' => $gvals], rowMetrics($r));
         }
         // Include subtotals for PDF
@@ -696,7 +808,10 @@ if ($exportMode && $hasFilters && !$queryErr) {
         $rn = 1;
         foreach ($rows as $r) {
             $gvals = [];
-            for ($i = 0; $i < $numGroupLevels; $i++) $gvals[] = (string)($r["g$i"] ?? '');
+            for ($i = 0; $i < $numGroupLevels; $i++) {
+                $slot = (int)$activeGroups[$i]['level'] - 1;
+                $gvals[] = (string)($r['g' . $slot] ?? '');
+            }
             $m = rowMetrics($r);
             fputcsv($out, array_merge([$rn++], $gvals, [
                 $m['Qty'], $m['Amount'], $m['DiscAmt'], $m['TaxableAmt'], $m['GrossAmt'],
@@ -1168,7 +1283,7 @@ renderFilterTab('tab-company','tab_company_mode',$tabCompany,'ms-cmp','sel_compa
 
 <?php
 renderFilterTab('tab-color','tab_color_mode',$tabColor,'ms-col','sel_color',$ddColor,'Color_name','Color_name',$selColor,'All Colors','Select Color','— Select Colors —');
-renderFilterTab('tab-desc','tab_desc_mode',$tabDesc,'ms-desc','sel_description',$ddDescription,'PRODUCT_NAME','PRODUCT_NAME',$selDesc,'All Descriptions','Select Description','— Select Descriptions —');
+renderFilterTab('tab-desc','tab_desc_mode',$tabDesc,'ms-desc','sel_description',$ddDescription,'Des_Name','Des_Name',$selDesc,'All Descriptions','Select Description','— Select Descriptions —');
 ?>
 
 
@@ -1342,7 +1457,10 @@ function emitSubtotalRow($n, $key, $sr, $activeGroups, $totals) {
 
 foreach ($rows as $idx => $row):
     $curKeys = [];
-    for ($i = 0; $i < $numGroupLevels; $i++) $curKeys[$i] = (string)($row["g$i"] ?? '');
+    for ($i = 0; $i < $numGroupLevels; $i++) {
+        $slot = (int)$activeGroups[$i]['level'] - 1;
+        $curKeys[$i] = (string)($row['g' . $slot] ?? '');
+    }
 
     if ($idx > 0) {
         // Emit subtotals from deepest to shallowest when keys change

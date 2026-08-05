@@ -20,13 +20,18 @@
 | Export only one page | CSV / Excel / PDF pull **all** grouped rows via `?export=csv\|excel\|pdfdata` using session filters |
 | Print | Browser Print (any printer) + zoom in/out |
 
-### Query notes
+### Query notes (mirrors original .NET SQL)
 
-- Sale (`type.STATUS=4`) positive; Sale Return (`STATUS=5`) negated
-- Taxable = `stock.TOT_AMOUNT`; Amount = `stock.AMOUNT`; Disc = `stock.SDISC_AMT`
-- Central / Local / Exempted Amt & Qty split by `sbill1.TAX_YN` and zero-tax lines
+- Driver: `SBill1` → `Stock` → masters (same join set as offline)
+- `UNION ALL`: Sale (`Type.Status=4`) positive + Sale Return (`Status=5`) negated
+- **Disc Amt** = `Stock.SDisc_Amt + (Tot_Amt * SBill1.Disc / 100)`
+- **Taxable Amt** = `Stock.Tot_Amount`
+- **Gross / Tot_Amt** = `Tot_Amt - (Tot_Amt * SBill1.Disc / 100)`
+- **CGST / IGST** from `SBill1.TAX_YN` (`N`→CGST, `Y`→IGST); **SGST** = `Stock.SSat_Amt`
+- **Central / Local / Exempted Amt & Qty** from **`Stock.Tax_YN`** (`Y` / `N` / `F`)
+- Official Ist–VIth grouping: Product Group, Category, Company, Color, Description, Company No
 - Qty Cont % / Gross Cont % = row share of report grand totals
-- Optional masters (`subgroup`, `citymaster`, `state`, `representative`) are joined only when present
+- Optional masters (`description`, `subgroup`, `citymaster`, `state`, `representative`, `acgroup`) joined when present
 
 ### Dependencies
 
