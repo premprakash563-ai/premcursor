@@ -106,6 +106,28 @@ if (!function_exists('pct')) {
     }
 }
 
+
+// ── AJAX: load Subgroup checkboxes for Party / Supplier Acgroup ───────────────
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'subgroups') {
+    header('Content-Type: application/json; charset=utf-8');
+    $code = esc($db, $_GET['code'] ?? '');
+    $out = [];
+    if ($code !== '') {
+        $rows = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$code' ORDER BY SUB_NAME");
+        if (empty($rows)) {
+            $rows = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$code' ORDER BY Sub_Name");
+        }
+        foreach ($rows as $r) {
+            $out[] = [
+                'SUBCODE'  => (string)($r['SUBCODE'] ?? $r['SubCode'] ?? ''),
+                'SUB_NAME' => (string)($r['SUB_NAME'] ?? $r['Sub_Name'] ?? ''),
+            ];
+        }
+    }
+    echo json_encode($out, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // ── Filters capture ───────────────────────────────────────────────────────────
 $isPost       = ($_SERVER['REQUEST_METHOD'] === 'POST');
 $page         = max(1, (int)($_GET['page'] ?? 1));
@@ -181,13 +203,17 @@ function takeMode($filters, $key, $default = 'all') {
 
 $tabDate       = 'select';
 $tabType       = takeMode($filters, 'tab_type_mode');
-$selType       = asList($filters['sel_type'] ?? []);
+$selType       = asList($filters['sel_type'] ?? $filters['type_list'] ?? []);
 $tabParty      = takeMode($filters, 'tab_party_mode');
-$selPartyAcg   = esc($db, $filters['sel_party_acgroup'] ?? '');
-$selParty      = asList($filters['sel_party'] ?? []);
+// Party = Acgroup (SBill1.Code) + Subgroup checkboxes (SBill1.SubCode) — same as live app
+$selPartyAcg   = esc($db, $filters['sel_party_acgroup'] ?? $filters['party_code'] ?? '');
+$selPartySubs  = asList($filters['sel_party_sub'] ?? $filters['party_sub_codes'] ?? []);
+$selParty      = $selPartySubs; // back-compat for tab badge
 $tabSupplier   = takeMode($filters, 'tab_supplier_mode');
+// Supplier = Product Acgroup (Product.Code / Acgroup_1) + Subgroup_1 (Product.SubCode)
 $selSuppAcg    = esc($db, $filters['sel_supplier_acgroup'] ?? '');
-$selSupplier   = asList($filters['sel_supplier'] ?? []);
+$selSuppSubs   = asList($filters['sel_supplier_sub'] ?? []);
+$selSupplier   = $selSuppSubs;
 $tabCustomer   = takeMode($filters, 'tab_customer_mode');
 $selCustomer   = asList($filters['sel_customer'] ?? []);
 $tabTransport  = takeMode($filters, 'tab_transport_mode');
@@ -267,15 +293,42 @@ if (empty($ddCompNo)) {
 }
 $ddProdGroup   = safeQuery($db, "SELECT ProdGroup_Code, ProdGroup_Name FROM productgroup ORDER BY ProdGroup_Name");
 
-$ddType = safeQuery($db, "SELECT V_TYPE, IFNULL(V_Name, V_TYPE) AS V_Name FROM type WHERE STATUS IN (4,5) ORDER BY V_Name");
-if (empty($ddType)) $ddType = safeQuery($db, "SELECT V_TYPE, V_TYPE AS V_Name FROM type ORDER BY V_TYPE");
+// Type — live app query (Status 4 sale / 5 sale return)
+$ddType = safeQuery($db, "SELECT V_TYPE, MAX(DESCRIPTION) AS DESCRIPTION FROM type WHERE Status IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
+if (empty($ddType)) {
+    $ddType = safeQuery($db, "SELECT V_TYPE, MAX(IFNULL(DESCRIPTION, IFNULL(V_Name, V_TYPE))) AS DESCRIPTION FROM type WHERE STATUS IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
+}
 
-$ddAcgroup = safeQuery($db, "SELECT Code, IFNULL(Name, Code) AS Name FROM acgroup ORDER BY Name");
-if (empty($ddAcgroup)) $ddAcgroup = safeQuery($db, "SELECT DISTINCT Group_Code AS Code, Group_Code AS Name FROM subgroup ORDER BY Group_Code");
+// Party list = Acgroup (CODE, NAME) — then Subgroup by GROUP_CODE
+$ddAcgroup = safeQuery($db, "SELECT CODE, NAME FROM acgroup ORDER BY NAME");
+if (empty($ddAcgroup)) {
+    $ddAcgroup = safeQuery($db, "SELECT Code AS CODE, IFNULL(Name, Code) AS NAME FROM acgroup ORDER BY NAME");
+}
+// normalize keys Code/Name for templates
+foreach ($ddAcgroup as &$ag) {
+    if (!isset($ag['CODE']) && isset($ag['Code'])) $ag['CODE'] = $ag['Code'];
+    if (!isset($ag['NAME']) && isset($ag['Name'])) $ag['NAME'] = $ag['Name'];
+}
+unset($ag);
 
-$ddParty = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
-$ddCustomer = $ddParty;
-$ddSupplier = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
+// Preload party subgroups when an Acgroup is already selected
+$ddPartySubs = [];
+if ($selPartyAcg !== '') {
+    $ddPartySubs = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selPartyAcg' ORDER BY SUB_NAME");
+    if (empty($ddPartySubs)) {
+        $ddPartySubs = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selPartyAcg' ORDER BY Sub_Name");
+    }
+}
+$ddSuppSubs = [];
+if ($selSuppAcg !== '') {
+    $ddSuppSubs = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selSuppAcg' ORDER BY SUB_NAME");
+    if (empty($ddSuppSubs)) {
+        $ddSuppSubs = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selSuppAcg' ORDER BY Sub_Name");
+    }
+}
+
+// Customer still lists all subgroup names (bill parties)
+$ddCustomer = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
 
 $ddTransport = safeQuery($db, "SELECT DISTINCT Trans_Name AS name FROM transport ORDER BY Trans_Name");
 if (empty($ddTransport)) $ddTransport = safeQuery($db, "SELECT DISTINCT IFNULL(Transport,'') AS name FROM sbill1 WHERE IFNULL(Transport,'') <> '' ORDER BY name");
@@ -385,13 +438,15 @@ $whereParts = ["st.V_DATE >= '$from'", "st.V_DATE <= '$to'"];
 if ($tabType === 'select' && !empty($selType)) {
     $whereParts[] = 'st.V_TYPE IN (' . inListSql($db, $selType) . ')';
 }
+// Party on bill: SBill1.Code = Acgroup, SBill1.SubCode = Subgroup
 if ($tabParty === 'select') {
     if ($selPartyAcg !== '') $whereParts[] = "sb.Code = '$selPartyAcg'";
-    if (!empty($selParty)) $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selParty) . ')';
+    if (!empty($selPartySubs)) $whereParts[] = 'sb.SubCode IN (' . inListSql($db, $selPartySubs) . ')';
 }
+// Supplier from product account: Product.Code = Acgroup_1, Product.SubCode = Subgroup_1 (.NET query)
 if ($tabSupplier === 'select') {
     if ($selSuppAcg !== '') $whereParts[] = "IFNULL(p.Code, IFNULL(p.GROUP_CODE,'')) = '$selSuppAcg'";
-    if (!empty($selSupplier)) $whereParts[] = 'IFNULL(supp.Sub_Name, cd.comp_name) IN (' . inListSql($db, $selSupplier) . ')';
+    if (!empty($selSuppSubs)) $whereParts[] = 'IFNULL(p.Subcode, IFNULL(p.SubCode,'')) IN (' . inListSql($db, $selSuppSubs) . ')';
 }
 if ($tabCustomer === 'select' && !empty($selCustomer)) {
     $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selCustomer) . ')';
@@ -910,6 +965,10 @@ tr.subtotal-row td.lvl-2 { background:#e6edff; }
 tr.subtotal-row td.lvl-3 { background:#f0f4ff; }
 #grandTotalRow td { background:#212529 !important; color:#fff !important; font-weight:700; }
 .zoom-bar { display:flex; align-items:center; gap:8px; }
+.sub-cb-list { max-height:220px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:6px; padding:8px 10px; background:#fafbfc; min-width:240px; flex:1; }
+.sub-cb-list label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; margin:0 0 4px; cursor:pointer; }
+.sub-cb-list input[type=checkbox] { width:14px; height:14px; accent-color:#0d6efd; }
+.sub-cb-empty { font-size:12px; color:#9ca3af; padding:6px 0; }
 @media print {
   .no-print, .filter-tabs, #filterForm, .sidebar, nav, .btn, .pagination, #tableSearch { display:none !important; }
   .col-md-9, .col-lg-10 { width:100% !important; max-width:100% !important; flex:0 0 100%; }
@@ -942,8 +1001,8 @@ tr.subtotal-row td.lvl-3 { background:#f0f4ff; }
 $tabsMeta = [
   'tab-date' => ['label'=>'Date Range','mode'=>'select','val'=>$from.' to '.$to],
   'tab-type' => ['label'=>'Type','mode'=>$tabType,'val'=>implode(', ',$selType)],
-  'tab-party' => ['label'=>'Party','mode'=>$tabParty,'val'=>implode(', ',$selParty)],
-  'tab-supplier' => ['label'=>'Supplier','mode'=>$tabSupplier,'val'=>implode(', ',$selSupplier)],
+  'tab-party' => ['label'=>'Party','mode'=>$tabParty,'val'=>($selPartyAcg!==''?$selPartyAcg.(!empty($selPartySubs)?' ('.count($selPartySubs).')':''):'')],
+  'tab-supplier' => ['label'=>'Supplier','mode'=>$tabSupplier,'val'=>($selSuppAcg!==''?$selSuppAcg.(!empty($selSuppSubs)?' ('.count($selSuppSubs).')':''):'')],
   'tab-customer' => ['label'=>'Customer','mode'=>$tabCustomer,'val'=>implode(', ',$selCustomer)],
   'tab-transport' => ['label'=>'Transport','mode'=>$tabTransport,'val'=>implode(', ',$selTransport)],
   'tab-refno' => ['label'=>'Ref. No','mode'=>$tabRefNo,'val'=>implode(', ',$selRefNo)],
@@ -1089,24 +1148,33 @@ function renderFilterTab($id, $modeName, $mode, $msId, $selName, $dd, $valKey, $
 ?>
 
 <?php
-// Type
-renderFilterTab('tab-type','tab_type_mode',$tabType,'ms-type','sel_type',$ddType,'V_TYPE','V_Name',$selType,'All Types','Select Type','— Select Types —');
-
-// Party with Acgroup
-ob_start();
+// ── Type (Voucher) — All / Select with DESCRIPTION checkboxes ───────────────
 ?>
-          <div>
-            <label>Select Acgroup</label>
-            <select name="sel_party_acgroup" id="party-acg" class="form-select form-select-sm" onchange="filterByAcgroup('ms-party', this.value)">
-              <option value="">— All Acgroups —</option>
-              <?php foreach ($ddAcgroup as $r): ?>
-                <option value="<?= h($r['Code']) ?>" <?= $selPartyAcg===(string)$r['Code']?'selected':'' ?>><?= h($r['Name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+    <div class="tab-pane fade" id="tab-type">
+      <div class="tab-radio-row">
+        <label><input type="radio" name="tab_type_mode" value="all" <?= $tabType!=='select'?'checked':'' ?> onchange="togglePanel('tab-type-panel', false)"> All</label>
+        <label><input type="radio" name="tab_type_mode" value="select" <?= $tabType==='select'?'checked':'' ?> onchange="togglePanel('tab-type-panel', true)"> Select Type</label>
+      </div>
+      <div id="tab-type-panel" style="<?= $tabType==='select'?'':'display:none' ?>">
+        <div class="sub-cb-list" id="typeList">
+          <?php if (empty($ddType)): ?>
+            <div class="sub-cb-empty">No sale / sale-return types found.</div>
+          <?php else: foreach ($ddType as $t):
+            $tv = (string)($t['V_TYPE'] ?? '');
+            $tl = (string)($t['DESCRIPTION'] ?? $tv);
+            if ($tv === '') continue;
+          ?>
+            <label>
+              <input type="checkbox" name="sel_type[]" value="<?= h($tv) ?>" <?= multiSelected($selType, $tv) ?>>
+              <?= h($tl) ?>
+            </label>
+          <?php endforeach; endif; ?>
+        </div>
+      </div>
+    </div>
+
 <?php
-$partyExtra = ob_get_clean();
-// custom party tab with data-cat on items
+// ── Party — Acgroup dropdown, then Subgroup name checkboxes ─────────────────
 ?>
     <div class="tab-pane fade" id="tab-party">
       <div class="tab-radio-row">
@@ -1114,51 +1182,42 @@ $partyExtra = ob_get_clean();
         <label><input type="radio" name="tab_party_mode" value="select" <?= $tabParty==='select'?'checked':'' ?> onchange="togglePanel('tab-party-panel', true)"> Select Party</label>
       </div>
       <div id="tab-party-panel" style="<?= $tabParty==='select'?'':'display:none' ?>">
-        <div class="select-panel">
-          <?= $partyExtra ?>
-          <div class="ms-dropdown" id="ms-party">
-            <div class="ms-trigger" onclick="toggleMs('ms-party')">
-              <span class="ms-text"><?= !empty($selParty)?count($selParty).' selected':'— Select Parties —' ?></span>
-              <span class="ms-count"><?= !empty($selParty)?count($selParty):'' ?></span>
-            </div>
-            <div class="ms-menu" id="ms-party-menu">
-              <div class="ms-search"><input type="text" placeholder="Search…" oninput="msFilter('ms-party', this.value)" onclick="event.stopPropagation()"></div>
-              <?php foreach ($ddParty as $r):
-                $nm = (string)($r['Sub_Name'] ?? '');
-                if ($nm==='') continue;
-                $cid = 'party_'.md5($nm);
+        <div class="select-panel" style="align-items:flex-start;">
+          <div style="min-width:220px;">
+            <label>Select Acgroup / Party</label>
+            <select name="sel_party_acgroup" id="partySelect" class="form-select form-select-sm mb-1"
+                    onchange="loadSubgroups('partySelect','partySubList','sel_party_sub[]')">
+              <option value="">— Select Party —</option>
+              <?php foreach ($ddAcgroup as $r):
+                $code = (string)($r['CODE'] ?? $r['Code'] ?? '');
+                $name = (string)($r['NAME'] ?? $r['Name'] ?? $code);
               ?>
-              <div class="ms-item" data-cat="<?= h((string)($r['Group_Code'] ?? '')) ?>">
-                <input type="checkbox" name="sel_party[]" value="<?= h($nm) ?>" id="<?= h($cid) ?>" <?= multiSelected($selParty,$nm) ?>>
-                <label for="<?= h($cid) ?>"><?= h($nm) ?></label>
-              </div>
+                <option value="<?= h($code) ?>" <?= $selPartyAcg===$code?'selected':'' ?>><?= h($name) ?></option>
               <?php endforeach; ?>
-              <div class="ms-actions">
-                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="msSelectAll('ms-party',true)">All</button>
-                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="msSelectAll('ms-party',false)">None</button>
-                <button type="button" class="btn btn-primary btn-xs" onclick="toggleMs('ms-party')">Done</button>
-              </div>
-            </div>
+            </select>
+          </div>
+          <div class="sub-cb-list" id="partySubList">
+            <?php if ($selPartyAcg === ''): ?>
+              <div class="sub-cb-empty">Pehle upar se Party (Acgroup) select karein — names yahan checkbox me aayenge.</div>
+            <?php elseif (empty($ddPartySubs)): ?>
+              <div class="sub-cb-empty">Is Acgroup me koi Subgroup nahi mila.</div>
+            <?php else: foreach ($ddPartySubs as $sb):
+              $sc = (string)($sb['SUBCODE'] ?? '');
+              $sn = (string)($sb['SUB_NAME'] ?? $sc);
+              if ($sc === '') continue;
+            ?>
+              <label>
+                <input type="checkbox" name="sel_party_sub[]" value="<?= h($sc) ?>" <?= multiSelected($selPartySubs, $sc) ?>>
+                <?= h($sn) ?>
+              </label>
+            <?php endforeach; endif; ?>
           </div>
         </div>
       </div>
     </div>
 
 <?php
-// Supplier with Acgroup
-ob_start();
-?>
-          <div>
-            <label>Select Acgroup</label>
-            <select name="sel_supplier_acgroup" id="supp-acg" class="form-select form-select-sm" onchange="filterByAcgroup('ms-supp', this.value)">
-              <option value="">— All Acgroups —</option>
-              <?php foreach ($ddAcgroup as $r): ?>
-                <option value="<?= h($r['Code']) ?>" <?= $selSuppAcg===(string)$r['Code']?'selected':'' ?>><?= h($r['Name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-<?php
-$suppExtra = ob_get_clean();
+// ── Supplier — Product.Code (Acgroup_1) + Product.SubCode (Subgroup_1) ───────
 ?>
     <div class="tab-pane fade" id="tab-supplier">
       <div class="tab-radio-row">
@@ -1166,31 +1225,36 @@ $suppExtra = ob_get_clean();
         <label><input type="radio" name="tab_supplier_mode" value="select" <?= $tabSupplier==='select'?'checked':'' ?> onchange="togglePanel('tab-supplier-panel', true)"> Select Supplier</label>
       </div>
       <div id="tab-supplier-panel" style="<?= $tabSupplier==='select'?'':'display:none' ?>">
-        <div class="select-panel">
-          <?= $suppExtra ?>
-          <div class="ms-dropdown" id="ms-supp">
-            <div class="ms-trigger" onclick="toggleMs('ms-supp')">
-              <span class="ms-text"><?= !empty($selSupplier)?count($selSupplier).' selected':'— Select Suppliers —' ?></span>
-              <span class="ms-count"><?= !empty($selSupplier)?count($selSupplier):'' ?></span>
-            </div>
-            <div class="ms-menu" id="ms-supp-menu">
-              <div class="ms-search"><input type="text" placeholder="Search…" oninput="msFilter('ms-supp', this.value)" onclick="event.stopPropagation()"></div>
-              <?php foreach ($ddSupplier as $r):
-                $nm = (string)($r['Sub_Name'] ?? '');
-                if ($nm==='') continue;
-                $cid = 'supp_'.md5($nm);
+        <div class="select-panel" style="align-items:flex-start;">
+          <div style="min-width:220px;">
+            <label>Select Acgroup (Supplier)</label>
+            <select name="sel_supplier_acgroup" id="suppSelect" class="form-select form-select-sm mb-1"
+                    onchange="loadSubgroups('suppSelect','suppSubList','sel_supplier_sub[]')">
+              <option value="">— Select Acgroup —</option>
+              <?php foreach ($ddAcgroup as $r):
+                $code = (string)($r['CODE'] ?? $r['Code'] ?? '');
+                $name = (string)($r['NAME'] ?? $r['Name'] ?? $code);
               ?>
-              <div class="ms-item" data-cat="<?= h((string)($r['Group_Code'] ?? '')) ?>">
-                <input type="checkbox" name="sel_supplier[]" value="<?= h($nm) ?>" id="<?= h($cid) ?>" <?= multiSelected($selSupplier,$nm) ?>>
-                <label for="<?= h($cid) ?>"><?= h($nm) ?></label>
-              </div>
+                <option value="<?= h($code) ?>" <?= $selSuppAcg===$code?'selected':'' ?>><?= h($name) ?></option>
               <?php endforeach; ?>
-              <div class="ms-actions">
-                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="msSelectAll('ms-supp',true)">All</button>
-                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="msSelectAll('ms-supp',false)">None</button>
-                <button type="button" class="btn btn-primary btn-xs" onclick="toggleMs('ms-supp')">Done</button>
-              </div>
-            </div>
+            </select>
+            <div class="small text-muted mt-1">.NET: Product.Code → Acgroup_1, Product.SubCode → Subgroup_1</div>
+          </div>
+          <div class="sub-cb-list" id="suppSubList">
+            <?php if ($selSuppAcg === ''): ?>
+              <div class="sub-cb-empty">Pehle Acgroup select karein — supplier names checkbox me aayenge.</div>
+            <?php elseif (empty($ddSuppSubs)): ?>
+              <div class="sub-cb-empty">Is Acgroup me koi Subgroup nahi mila.</div>
+            <?php else: foreach ($ddSuppSubs as $sb):
+              $sc = (string)($sb['SUBCODE'] ?? '');
+              $sn = (string)($sb['SUB_NAME'] ?? $sc);
+              if ($sc === '') continue;
+            ?>
+              <label>
+                <input type="checkbox" name="sel_supplier_sub[]" value="<?= h($sc) ?>" <?= multiSelected($selSuppSubs, $sc) ?>>
+                <?= h($sn) ?>
+              </label>
+            <?php endforeach; endif; ?>
           </div>
         </div>
       </div>
@@ -1588,6 +1652,40 @@ var GROUPING_OPTIONS = <?= json_encode($groupingOptions, JSON_UNESCAPED_UNICODE)
 var HAS_FILTERS = <?= $hasFilters ? 'true' : 'false' ?>;
 var reportZoom = 1;
 
+
+function loadSubgroups(selectId, listId, checkboxName) {
+  var sel = document.getElementById(selectId);
+  var list = document.getElementById(listId);
+  if (!sel || !list) return;
+  var code = sel.value || '';
+  if (!code) {
+    list.innerHTML = '<div class="sub-cb-empty">Pehle Acgroup select karein — names yahan checkbox me aayenge.</div>';
+    return;
+  }
+  list.innerHTML = '<div class="sub-cb-empty">Loading…</div>';
+  fetch('?ajax=subgroups&code=' + encodeURIComponent(code))
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      if (!rows || !rows.length) {
+        list.innerHTML = '<div class="sub-cb-empty">Is Acgroup me koi Subgroup nahi mila.</div>';
+        return;
+      }
+      var html = '';
+      rows.forEach(function(row){
+        var sc = row.SUBCODE || '';
+        var sn = row.SUB_NAME || sc;
+        if (!sc) return;
+        var id = listId + '_' + sc;
+        html += '<label><input type="checkbox" name="'+checkboxName+'" value="'+sc.replace(/"/g,'&quot;')+'" id="'+id+'"> '+
+                (sn.replace(/</g,'&lt;'))+'</label>';
+      });
+      list.innerHTML = html || '<div class="sub-cb-empty">Is Acgroup me koi Subgroup nahi mila.</div>';
+    })
+    .catch(function(){
+      list.innerHTML = '<div class="sub-cb-empty">Load failed.</div>';
+    });
+}
+
 function togglePanel(id, show) {
   var el = document.getElementById(id);
   if (el) el.style.display = show ? '' : 'none';
@@ -1702,10 +1800,6 @@ document.querySelectorAll('.ms-item input[type=checkbox]').forEach(function(cb){
 });
 
 (function init(){
-  var partyAcg = document.getElementById('party-acg');
-  if (partyAcg && partyAcg.value) filterByAcgroup('ms-party', partyAcg.value);
-  var suppAcg = document.getElementById('supp-acg');
-  if (suppAcg && suppAcg.value) filterByAcgroup('ms-supp', suppAcg.value);
   var szCat = document.getElementById('sz-cat-dd');
   if (szCat && szCat.value) filterByAcgroup('ms-sz', szCat.value);
   document.querySelectorAll('.ms-dropdown').forEach(function(ms){ updateMsTrigger(ms.id); });
