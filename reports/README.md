@@ -24,8 +24,12 @@ sale/category-wise-sale-register.php
 
 ### Query (.NET parity)
 
-- `SBill1` → `Stock` UNION ALL Status 4 / 5
-- Disc / Tot_Amt / Central|Local|Exempted from `Stock.Tax_YN` (`Y`/`N`/`F`)
+- `SBill1` → `Stock` UNION ALL Status 4 / 5 (Type join filters Status per leg)
+- **Taxable** = `Stock.Tot_Amount` (not confused with Tot_Amt)
+- **Gross / Tot_Amt** = `Tot_Amt - (Tot_Amt * SBill1.Disc / 100)`
+- **Disc** = `SDisc_Amt + (Tot_Amt * SBill1.Disc / 100)`
+- Central / Local / Exempted from `Stock.Tax_YN` (`Y` / `N` / `F`) using net Tot_Amt
+- CGST / IGST from `SBill1.TAX_YN` + `Stock.Tax_Amt`; SGST = `Stock.SSat_Amt`
 
 ### Party / Type / Supplier
 

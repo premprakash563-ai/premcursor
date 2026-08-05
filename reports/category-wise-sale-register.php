@@ -1,6 +1,6 @@
 <?php
 /**
- * CSR_BUILD_20260805_D46DAF4 — if this string is missing on server, old file is still deployed.
+ * CSR_BUILD_20260805_ACC1 — if this string is missing on server, old file is still deployed.
  *
  * Category-wise Sale Register
  *
@@ -13,7 +13,11 @@
  *
  * Query engine mirrors original .NET Category-wise Sale Register:
  *   UNION ALL Sale (Type.Status=4) + Sale Return (Status=5, negated)
- *   Disc / Tot_Amt / Central|Local|Exempted from Stock.Tax_YN + SBill1.Disc
+ *   Taxable = Stock.Tot_Amount
+ *   Gross/Tot_Amt = Stock.Tot_Amt - (Stock.Tot_Amt * SBill1.Disc / 100)
+ *   Disc = Stock.SDisc_Amt + (Stock.Tot_Amt * SBill1.Disc / 100)
+ *   Central|Local|Exempted from Stock.Tax_YN (Y/N/F) using net Tot_Amt
+ *   CGST/IGST from SBill1.TAX_YN + Stock.Tax_Amt; SGST = Stock.SSat_Amt
  * UI: multi filters, grouping, Cont%, full-dataset export & print.
  */
 error_reporting(E_ALL);
@@ -85,7 +89,8 @@ if (!function_exists('columnExists')) {
         try {
             $t = $db->real_escape_string($table);
             $c = $db->real_escape_string($col);
-            $r = $db->query("SHOW COLUMNS FROM `$t` LIKE '$c'");
+            // Exact Field match — LIKE treats "_" as wildcard and can mis-detect columns
+            $r = $db->query("SHOW COLUMNS FROM `$t` WHERE Field = '$c'");
             $cache[$key] = ($r && $r->num_rows > 0);
         } catch (Throwable $e) {
             $cache[$key] = false;
@@ -447,19 +452,49 @@ $pickCol = function ($table, $alias, $candidates, $fallbackSql = '0') use ($db) 
     }
     return $fallbackSql;
 };
-$totAmtExpr    = 'IFNULL(' . $pickCol('stock', 'st', ['Tot_Amt', 'TOT_AMT', 'TOT_AMOUNT', 'Tot_Amount'], '0') . ',0)';
-$totAmountExpr = 'IFNULL(' . $pickCol('stock', 'st', ['Tot_Amount', 'TOT_AMOUNT', 'Tot_Amt', 'TOT_AMT'], '0') . ',0)';
+
+// .NET uses TWO distinct stock amount columns — never cross-fallback between them:
+//   Tot_Amount → TaxableAmt
+//   Tot_Amt    → Gross / Central / Local / Exempted / bill-disc base
+$totAmtCol     = firstExistingCol($db, 'stock', ['Tot_Amt', 'TOT_AMT']);
+$totAmountCol  = firstExistingCol($db, 'stock', ['Tot_Amount', 'TOT_AMOUNT']);
+$itemNetCol    = firstExistingCol($db, 'stock', ['ItemNetAmt', 'ITEMNETAMT', 'Item_Net_Amt']);
 $sdiscExpr     = 'IFNULL(' . $pickCol('stock', 'st', ['SDisc_Amt', 'SDISC_AMT', 'SDiscAmt'], '0') . ',0)';
 $billDiscExpr  = columnExists($db, 'sbill1', 'Disc') ? 'IFNULL(sb.Disc,0)' : '0';
 $taxAmtExpr    = 'IFNULL(' . $pickCol('stock', 'st', ['Tax_Amt', 'TAX_AMT', 'TaxAmt'], '0') . ',0)';
 $ssatExpr      = 'IFNULL(' . $pickCol('stock', 'st', ['SSat_Amt', 'SSAT_AMT', 'SSatAmt'], '0') . ',0)';
 $stockTaxYnCol = firstExistingCol($db, 'stock', ['Tax_YN', 'TAX_YN']);
-$stockTaxYn    = $stockTaxYnCol ? "IFNULL(st.`$stockTaxYnCol`,'N')" : "'N'";
-$billTaxYn     = columnExists($db, 'sbill1', 'TAX_YN') ? "IFNULL(sb.TAX_YN,'N')" : "'N'";
-// Net after bill-header discount (matches .NET Tot_Amt formula)
-$netTotExpr   = "($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))";
-// Disc amt = line disc + bill disc portion (matches .NET SDisc_Amt algebra)
-$discAmtExpr  = "($sdiscExpr + ($totAmtExpr * $billDiscExpr / 100))";
+$billTaxYnCol  = firstExistingCol($db, 'sbill1', ['TAX_YN', 'Tax_YN']);
+// Normalize Tax_YN (trim/case) so 'Y '/'y' still split Central/Local/Exempted correctly
+$stockTaxYn    = $stockTaxYnCol ? "UPPER(TRIM(IFNULL(st.`$stockTaxYnCol`,'N')))" : "'N'";
+$billTaxYn     = $billTaxYnCol ? "UPPER(TRIM(IFNULL(sb.`$billTaxYnCol`,'N')))" : "'N'";
+
+if ($totAmountCol) {
+    $totAmountExpr = "IFNULL(st.`$totAmountCol`,0)";
+} elseif ($totAmtCol) {
+    // Schema missing Tot_Amount — last resort only
+    $totAmountExpr = "IFNULL(st.`$totAmtCol`,0)";
+} else {
+    $totAmountExpr = 'IFNULL(' . $pickCol('stock', 'st', ['AMOUNT', 'Amount'], '0') . ',0)';
+}
+
+if ($totAmtCol) {
+    $totAmtExpr   = "IFNULL(st.`$totAmtCol`,0)";
+    // Net after bill-header discount (matches .NET Tot_Amt formula)
+    $netTotExpr   = "($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))";
+    // Disc amt = line disc + bill disc portion (matches .NET SDisc_Amt algebra)
+    $discAmtExpr  = "($sdiscExpr + ($totAmtExpr * $billDiscExpr / 100))";
+} elseif ($itemNetCol) {
+    // ItemNetAmt is already net of bill disc in .NET MIS line query
+    $totAmtExpr   = "IFNULL(st.`$itemNetCol`,0)";
+    $netTotExpr   = $totAmtExpr;
+    $discAmtExpr  = "($sdiscExpr + ($totAmountExpr * $billDiscExpr / 100))";
+} else {
+    // Collapsed schema: only Tot_Amount/TOT_AMOUNT — apply same bill-disc algebra
+    $totAmtExpr   = $totAmountExpr;
+    $netTotExpr   = "($totAmtExpr - (($totAmtExpr * $billDiscExpr) / 100))";
+    $discAmtExpr  = "($sdiscExpr + ($totAmtExpr * $billDiscExpr / 100))";
+}
 
 $refNoExpr = '\'\'';
 foreach ([['sbill1','sb',['Ref_No','RefNo','REF_NO']], ['product','p',['RefNo','Ref_No','REF_NO']]] as $spec) {
@@ -545,8 +580,10 @@ if ($tabParty === 'select') {
 }
 // Supplier from product account: Product.Code = Acgroup_1, Product.SubCode = Subgroup_1 (.NET query)
 if ($tabSupplier === 'select') {
-    if ($selSuppAcg !== '') $whereParts[] = "IFNULL(p.Code, IFNULL(p.GROUP_CODE,'')) = '$selSuppAcg'";
-    if (!empty($selSuppSubs)) $whereParts[] = "IFNULL(p.Subcode, IFNULL(p.SubCode,'')) IN (" . inListSql($db, $selSuppSubs) . ")";
+    $prodCodeCol = firstExistingCol($db, 'product', ['Code', 'CODE', 'GROUP_CODE', 'Group_Code']);
+    $prodSubCol  = firstExistingCol($db, 'product', ['SubCode', 'Subcode', 'SUBCODE', 'SUB_CODE']);
+    if ($selSuppAcg !== '' && $prodCodeCol) $whereParts[] = "p.`$prodCodeCol` = '$selSuppAcg'";
+    if (!empty($selSuppSubs) && $prodSubCol) $whereParts[] = "p.`$prodSubCol` IN (" . inListSql($db, $selSuppSubs) . ")";
 }
 if ($tabCustomer === 'select' && !empty($selCustomer)) {
     $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selCustomer) . ')';
@@ -709,8 +746,8 @@ $FROM_JOINS = "
         LEFT JOIN specialinst2 si3 ON p.INST3_CODE = si3.s_code";
 
 if (tableExists($db, 'description')) {
-    $descCol = columnExists($db, 'product', 'Desc_Code') ? 'Desc_Code' : (columnExists($db, 'product', 'DESC_CODE') ? 'DESC_CODE' : '');
-    if ($descCol !== '') {
+    $descCol = firstExistingCol($db, 'product', ['Desc_Code', 'DESC_CODE', 'Des_Code', 'DES_CODE']);
+    if ($descCol) {
         $FROM_JOINS .= "\n        LEFT JOIN description des ON p.`$descCol` = des.Des_Code";
     } else {
         $FROM_JOINS .= "\n        LEFT JOIN (SELECT '' AS Des_Code, '' AS Des_Name) des ON 1=0";
@@ -723,9 +760,14 @@ if (tableExists($db, 'acgroup')) {
     $FROM_JOINS .= "\n        LEFT JOIN acgroup ag1 ON p.Code = ag1.Code";
 }
 if (tableExists($db, 'subgroup')) {
+    $prodCodeCol = firstExistingCol($db, 'product', ['Code', 'CODE', 'GROUP_CODE', 'Group_Code']);
+    $prodSubCol  = firstExistingCol($db, 'product', ['SubCode', 'Subcode', 'SUBCODE', 'SUB_CODE']);
+    $suppJoin = ($prodCodeCol && $prodSubCol)
+        ? "LEFT JOIN subgroup supp ON supp.SubCode = p.`$prodSubCol` AND supp.Group_Code = p.`$prodCodeCol`"
+        : "LEFT JOIN (SELECT '' AS Group_Code, '' AS SubCode, '' AS Sub_Name, '' AS City_Code) supp ON 1=0";
     $FROM_JOINS .= "
         LEFT JOIN subgroup party ON sb.Code = party.Group_Code AND sb.SubCode = party.SubCode
-        LEFT JOIN subgroup supp ON supp.SubCode = p.Subcode AND supp.Group_Code = p.Code
+        $suppJoin
         LEFT JOIN subgroup bank ON sb.Bank_Code = bank.SubCode
         LEFT JOIN subgroup wallet ON sb.Wallet_Code = wallet.Group_Code AND sb.Wallet_SubCode = wallet.SubCode";
 } else {
@@ -758,14 +800,22 @@ if (tableExists($db, 'representative')) {
 
 /**
  * Build one UNION leg (.NET Status=4 positive / Status=5 negative).
+ * Status is applied on the Type JOIN (not only WHERE) so duplicate Type rows
+ * for other statuses cannot multiply Sale/Return lines.
  */
 if (!function_exists('buildLegSql')) {
 function buildLegSql($status, $agg, $grpSelectSql, $groupBySql, $whereCommon, $fromJoins) {
+    $status = (int)$status;
+    $from = str_replace(
+        'LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE',
+        "LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE AND ty.STATUS = $status",
+        $fromJoins
+    );
     return "
         SELECT
             $grpSelectSql,
             $agg
-        $fromJoins
+        $from
         WHERE ty.STATUS = $status AND $whereCommon
         GROUP BY $groupBySql";
 }
@@ -812,14 +862,24 @@ function buildSubtotalSql($onlySaleReturn, $activeGroups, $nActive, $AGG_POS, $A
     }
     $selectCols = implode(', ', $cols);
     $groupBySql = implode(', ', $groupBy);
+    $fromSale = str_replace(
+        'LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE',
+        'LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE AND ty.STATUS = 4',
+        $FROM_JOINS
+    );
+    $fromRet = str_replace(
+        'LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE',
+        'LEFT JOIN type ty ON st.V_TYPE = ty.V_TYPE AND ty.STATUS = 5',
+        $FROM_JOINS
+    );
     $sale = "
         SELECT $selectCols, $AGG_POS
-        $FROM_JOINS
+        $fromSale
         WHERE ty.STATUS = 4 AND $whereCommon
         GROUP BY $groupBySql";
     $ret = "
         SELECT $selectCols, $AGG_NEG
-        $FROM_JOINS
+        $fromRet
         WHERE ty.STATUS = 5 AND $whereCommon
         GROUP BY $groupBySql";
     $union = $onlySaleReturn ? $ret : "($sale) UNION ALL ($ret)";
@@ -1038,7 +1098,7 @@ function renderMs($id, $name, $dd, $valKey, $labelKey, $selected, $placeholder, 
 
 include '../includes/header.php';
 ?>
-<!-- CSR_BUILD_20260805_D46DAF4 -->
+<!-- CSR_BUILD_20260805_ACC1 -->
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
