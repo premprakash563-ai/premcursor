@@ -455,7 +455,7 @@ if ($tabParty === 'select') {
 // Supplier from product account: Product.Code = Acgroup_1, Product.SubCode = Subgroup_1 (.NET query)
 if ($tabSupplier === 'select') {
     if ($selSuppAcg !== '') $whereParts[] = "IFNULL(p.Code, IFNULL(p.GROUP_CODE,'')) = '$selSuppAcg'";
-    if (!empty($selSuppSubs)) $whereParts[] = 'IFNULL(p.Subcode, IFNULL(p.SubCode,'')) IN (' . inListSql($db, $selSuppSubs) . ')';
+    if (!empty($selSuppSubs)) $whereParts[] = "IFNULL(p.Subcode, IFNULL(p.SubCode,'')) IN (" . inListSql($db, $selSuppSubs) . ")";
 }
 if ($tabCustomer === 'select' && !empty($selCustomer)) {
     $whereParts[] = 'party.Sub_Name IN (' . inListSql($db, $selCustomer) . ')';
