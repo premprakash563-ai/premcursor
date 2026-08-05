@@ -1,5 +1,7 @@
 <?php
 /**
+ * CSR_BUILD_20260805_D46DAF4 — if this string is missing on server, old file is still deployed.
+ *
  * Category-wise Sale Register
  *
  * LIVE PATH (direct):
@@ -42,9 +44,9 @@ if (!function_exists('esc')) {
 if (!function_exists('h')) {
     function h($val) { return htmlspecialchars((string)$val, ENT_QUOTES, 'UTF-8'); }
 }
-if (!function_exists('safeQuery')) {
-    function safeQuery($db, $sql) {
-        // PHP 8.1+ mysqli throws mysqli_sql_exception — @ does not suppress it
+// Always define — do not skip if another include already declared safeQuery
+if (!function_exists('csrSafeQuery')) {
+    function csrSafeQuery($db, $sql) {
         try {
             $r = $db->query($sql);
             if (!$r) return [];
@@ -55,6 +57,10 @@ if (!function_exists('safeQuery')) {
             return [];
         }
     }
+}
+// Back-compat alias only if not already defined elsewhere
+if (!function_exists('safeQuery')) {
+    function safeQuery($db, $sql) { return csrSafeQuery($db, $sql); }
 }
 if (!function_exists('tableExists')) {
     function tableExists($db, $name) {
@@ -141,9 +147,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'subgroups') {
     $code = esc($db, $_GET['code'] ?? '');
     $out = [];
     if ($code !== '') {
-        $rows = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$code' ORDER BY SUB_NAME");
+        $rows = csrSafeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$code' ORDER BY SUB_NAME");
         if (empty($rows)) {
-            $rows = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$code' ORDER BY Sub_Name");
+            $rows = csrSafeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$code' ORDER BY Sub_Name");
         }
         foreach ($rows as $r) {
             $out[] = [
@@ -301,38 +307,38 @@ $tabProdGroup  = takeMode($filters, 'tab_prodgroup_mode');
 $selProdGroup  = asList($filters['sel_prodgroup'] ?? []);
 
 // ── Dropdown data (defensive) ─────────────────────────────────────────────────
-$ddCategory    = safeQuery($db, "SELECT C_code, c_name FROM category ORDER BY c_name");
-$ddCompany     = safeQuery($db, "SELECT Comp_code, comp_name FROM compdetail ORDER BY comp_name");
-$ddSizeAll     = safeQuery($db, "SELECT s.s_code, s.s_name, s.cat_code FROM sizemaster s ORDER BY s.s_name");
-$ddSizeCats    = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN sizemaster s ON s.cat_code = c.C_code ORDER BY c.c_name");
-$ddColor       = safeQuery($db, "SELECT Color_code, Color_name FROM color ORDER BY Color_name");
-$ddDescription = safeQuery($db, "SELECT Des_Name, Des_Code FROM description ORDER BY Des_Name");
+$ddCategory    = csrSafeQuery($db, "SELECT C_code, c_name FROM category ORDER BY c_name");
+$ddCompany     = csrSafeQuery($db, "SELECT Comp_code, comp_name FROM compdetail ORDER BY comp_name");
+$ddSizeAll     = csrSafeQuery($db, "SELECT s.s_code, s.s_name, s.cat_code FROM sizemaster s ORDER BY s.s_name");
+$ddSizeCats    = csrSafeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN sizemaster s ON s.cat_code = c.C_code ORDER BY c.c_name");
+$ddColor       = csrSafeQuery($db, "SELECT Color_code, Color_name FROM color ORDER BY Color_name");
+$ddDescription = csrSafeQuery($db, "SELECT Des_Name, Des_Code FROM description ORDER BY Des_Name");
 if (empty($ddDescription)) {
-    $ddDescription = safeQuery($db, "SELECT DISTINCT PRODUCT_NAME AS Des_Name, PRODUCT_NAME AS Des_Code FROM product WHERE IFNULL(PRODUCT_NAME,'') <> '' ORDER BY PRODUCT_NAME");
+    $ddDescription = csrSafeQuery($db, "SELECT DISTINCT PRODUCT_NAME AS Des_Name, PRODUCT_NAME AS Des_Code FROM product WHERE IFNULL(PRODUCT_NAME,'') <> '' ORDER BY PRODUCT_NAME");
 }
-$ddSpInst1All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst i ORDER BY i.s_name");
-$ddSpInst1Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst i ON i.cat_code = c.C_code ORDER BY c.c_name");
-$ddSpInst2All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst1 i ORDER BY i.s_name");
-$ddSpInst2Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst1 i ON i.cat_code = c.C_code ORDER BY c.c_name");
-$ddSpInst3All  = safeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst2 i ORDER BY i.s_name");
-$ddSpInst3Cats = safeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst2 i ON i.cat_code = c.C_code ORDER BY c.c_name");
-$ddProduct     = safeQuery($db, "SELECT PRODUCT_CODE, PRODUCT_NAME, CONCAT(PRODUCT_CODE, ' - ', IFNULL(PRODUCT_NAME,'')) AS display FROM product ORDER BY PRODUCT_NAME LIMIT 8000");
-$ddCompNo      = safeQuery($db, "SELECT Comp_No AS comp_no FROM product WHERE IFNULL(Comp_No,'') <> '' GROUP BY Comp_No ORDER BY Comp_No");
+$ddSpInst1All  = csrSafeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst i ORDER BY i.s_name");
+$ddSpInst1Cats = csrSafeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst i ON i.cat_code = c.C_code ORDER BY c.c_name");
+$ddSpInst2All  = csrSafeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst1 i ORDER BY i.s_name");
+$ddSpInst2Cats = csrSafeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst1 i ON i.cat_code = c.C_code ORDER BY c.c_name");
+$ddSpInst3All  = csrSafeQuery($db, "SELECT i.s_code, i.s_name, i.cat_code FROM specialinst2 i ORDER BY i.s_name");
+$ddSpInst3Cats = csrSafeQuery($db, "SELECT DISTINCT c.C_code, c.c_name FROM category c JOIN specialinst2 i ON i.cat_code = c.C_code ORDER BY c.c_name");
+$ddProduct     = csrSafeQuery($db, "SELECT PRODUCT_CODE, PRODUCT_NAME, CONCAT(PRODUCT_CODE, ' - ', IFNULL(PRODUCT_NAME,'')) AS display FROM product ORDER BY PRODUCT_NAME LIMIT 8000");
+$ddCompNo      = csrSafeQuery($db, "SELECT Comp_No AS comp_no FROM product WHERE IFNULL(Comp_No,'') <> '' GROUP BY Comp_No ORDER BY Comp_No");
 if (empty($ddCompNo)) {
-    $ddCompNo = safeQuery($db, "SELECT DISTINCT comp_no FROM product WHERE IFNULL(comp_no,'') <> '' ORDER BY comp_no");
+    $ddCompNo = csrSafeQuery($db, "SELECT DISTINCT comp_no FROM product WHERE IFNULL(comp_no,'') <> '' ORDER BY comp_no");
 }
-$ddProdGroup   = safeQuery($db, "SELECT ProdGroup_Code, ProdGroup_Name FROM productgroup ORDER BY ProdGroup_Name");
+$ddProdGroup   = csrSafeQuery($db, "SELECT ProdGroup_Code, ProdGroup_Name FROM productgroup ORDER BY ProdGroup_Name");
 
 // Type — live app query (Status 4 sale / 5 sale return)
-$ddType = safeQuery($db, "SELECT V_TYPE, MAX(DESCRIPTION) AS DESCRIPTION FROM type WHERE Status IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
+$ddType = csrSafeQuery($db, "SELECT V_TYPE, MAX(DESCRIPTION) AS DESCRIPTION FROM type WHERE Status IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
 if (empty($ddType)) {
-    $ddType = safeQuery($db, "SELECT V_TYPE, MAX(IFNULL(DESCRIPTION, IFNULL(V_Name, V_TYPE))) AS DESCRIPTION FROM type WHERE STATUS IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
+    $ddType = csrSafeQuery($db, "SELECT V_TYPE, MAX(IFNULL(DESCRIPTION, IFNULL(V_Name, V_TYPE))) AS DESCRIPTION FROM type WHERE STATUS IN (4,5) GROUP BY V_TYPE ORDER BY DESCRIPTION");
 }
 
 // Party list = Acgroup (CODE, NAME) — then Subgroup by GROUP_CODE
-$ddAcgroup = safeQuery($db, "SELECT CODE, NAME FROM acgroup ORDER BY NAME");
+$ddAcgroup = csrSafeQuery($db, "SELECT CODE, NAME FROM acgroup ORDER BY NAME");
 if (empty($ddAcgroup)) {
-    $ddAcgroup = safeQuery($db, "SELECT Code AS CODE, IFNULL(Name, Code) AS NAME FROM acgroup ORDER BY NAME");
+    $ddAcgroup = csrSafeQuery($db, "SELECT Code AS CODE, IFNULL(Name, Code) AS NAME FROM acgroup ORDER BY NAME");
 }
 // normalize keys Code/Name for templates
 foreach ($ddAcgroup as &$ag) {
@@ -344,87 +350,87 @@ unset($ag);
 // Preload party subgroups when an Acgroup is already selected
 $ddPartySubs = [];
 if ($selPartyAcg !== '') {
-    $ddPartySubs = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selPartyAcg' ORDER BY SUB_NAME");
+    $ddPartySubs = csrSafeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selPartyAcg' ORDER BY SUB_NAME");
     if (empty($ddPartySubs)) {
-        $ddPartySubs = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selPartyAcg' ORDER BY Sub_Name");
+        $ddPartySubs = csrSafeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selPartyAcg' ORDER BY Sub_Name");
     }
 }
 $ddSuppSubs = [];
 if ($selSuppAcg !== '') {
-    $ddSuppSubs = safeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selSuppAcg' ORDER BY SUB_NAME");
+    $ddSuppSubs = csrSafeQuery($db, "SELECT SUBCODE, SUB_NAME FROM subgroup WHERE GROUP_CODE='$selSuppAcg' ORDER BY SUB_NAME");
     if (empty($ddSuppSubs)) {
-        $ddSuppSubs = safeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selSuppAcg' ORDER BY Sub_Name");
+        $ddSuppSubs = csrSafeQuery($db, "SELECT SubCode AS SUBCODE, Sub_Name AS SUB_NAME FROM subgroup WHERE Group_Code='$selSuppAcg' ORDER BY Sub_Name");
     }
 }
 
 // Customer still lists all subgroup names (bill parties)
-$ddCustomer = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
+$ddCustomer = csrSafeQuery($db, "SELECT DISTINCT SubCode, Sub_Name, Group_Code FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 8000");
 
 // Transport — probe real columns (Trans_Name may not exist on this DB)
 $ddTransport = [];
 if (tableExists($db, 'transport')) {
     $tCol = firstExistingCol($db, 'transport', ['Trans_Name', 'Transport', 'T_Name', 'Name', 'TRANSPORT']);
-    if ($tCol) $ddTransport = safeQuery($db, "SELECT DISTINCT `$tCol` AS name FROM transport WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
+    if ($tCol) $ddTransport = csrSafeQuery($db, "SELECT DISTINCT `$tCol` AS name FROM transport WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
 }
 if (empty($ddTransport)) {
     $tCol = firstExistingCol($db, 'sbill1', ['Transport', 'Trans_Name', 'TRANSPORT', 'TransName']);
-    if ($tCol) $ddTransport = safeQuery($db, "SELECT DISTINCT IFNULL(`$tCol`,'') AS name FROM sbill1 WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
+    if ($tCol) $ddTransport = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$tCol`,'') AS name FROM sbill1 WHERE IFNULL(`$tCol`,'') <> '' ORDER BY name");
 }
 
 // Ref No
 $ddRefNo = [];
 $refCol = firstExistingCol($db, 'sbill1', ['Ref_No', 'RefNo', 'REF_NO', 'ReferenceNo']);
 if ($refCol) {
-    $ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(`$refCol`,'') AS refno FROM sbill1 WHERE IFNULL(`$refCol`,'') <> '' ORDER BY refno LIMIT 5000");
+    $ddRefNo = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$refCol`,'') AS refno FROM sbill1 WHERE IFNULL(`$refCol`,'') <> '' ORDER BY refno LIMIT 5000");
 }
 if (empty($ddRefNo)) {
     $pref = firstExistingCol($db, 'product', ['RefNo', 'Ref_No', 'REF_NO']);
-    if ($pref) $ddRefNo = safeQuery($db, "SELECT DISTINCT IFNULL(`$pref`,'') AS refno FROM product WHERE IFNULL(`$pref`,'') <> '' ORDER BY refno LIMIT 5000");
+    if ($pref) $ddRefNo = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$pref`,'') AS refno FROM product WHERE IFNULL(`$pref`,'') <> '' ORDER BY refno LIMIT 5000");
 }
 
 $ddSaleGst = [];
 $ssatSel = columnExists($db, 'product', 'SSat_Per') ? 'IFNULL(SSat_Per,0)' : '0';
-$ddSaleGst = safeQuery($db, "SELECT DISTINCT ROUND(IFNULL(Tax,0)+$ssatSel,2) AS gst FROM product ORDER BY gst");
+$ddSaleGst = csrSafeQuery($db, "SELECT DISTINCT ROUND(IFNULL(Tax,0)+$ssatSel,2) AS gst FROM product ORDER BY gst");
 $purExpr = 'IFNULL(Tax,0)';
 if (columnExists($db, 'product', 'PTax')) $purExpr = 'IFNULL(PTax, IFNULL(Tax,0))';
 elseif (columnExists($db, 'product', 'Pur_Tax')) $purExpr = 'IFNULL(Pur_Tax, IFNULL(Tax,0))';
-$ddPurGst = safeQuery($db, "SELECT DISTINCT ROUND($purExpr,2) AS gst FROM product ORDER BY gst");
+$ddPurGst = csrSafeQuery($db, "SELECT DISTINCT ROUND($purExpr,2) AS gst FROM product ORDER BY gst");
 
-$ddCity = safeQuery($db, "SELECT City_Code, City_Name FROM citymaster ORDER BY City_Name");
-if (empty($ddCity)) $ddCity = safeQuery($db, "SELECT City_Code, City_Name FROM CityMaster ORDER BY City_Name");
+$ddCity = csrSafeQuery($db, "SELECT City_Code, City_Name FROM citymaster ORDER BY City_Name");
+if (empty($ddCity)) $ddCity = csrSafeQuery($db, "SELECT City_Code, City_Name FROM CityMaster ORDER BY City_Name");
 
-$ddState = safeQuery($db, "SELECT State_Code, IFNULL(State_Name, State_Code) AS State_Name FROM state ORDER BY State_Name");
-if (empty($ddState)) $ddState = safeQuery($db, "SELECT State_Code, IFNULL(State_Name, State_Code) AS State_Name FROM State ORDER BY State_Name");
+$ddState = csrSafeQuery($db, "SELECT State_Code, IFNULL(State_Name, State_Code) AS State_Name FROM state ORDER BY State_Name");
+if (empty($ddState)) $ddState = csrSafeQuery($db, "SELECT State_Code, IFNULL(State_Name, State_Code) AS State_Name FROM State ORDER BY State_Name");
 
-$ddRep = safeQuery($db, "SELECT Rp_Code, Rp_Name FROM representative ORDER BY Rp_Name");
-if (empty($ddRep)) $ddRep = safeQuery($db, "SELECT Rep_Code AS Rp_Code, Rp_Name FROM representative ORDER BY Rp_Name");
+$ddRep = csrSafeQuery($db, "SELECT Rp_Code, Rp_Name FROM representative ORDER BY Rp_Name");
+if (empty($ddRep)) $ddRep = csrSafeQuery($db, "SELECT Rep_Code AS Rp_Code, Rp_Name FROM representative ORDER BY Rp_Name");
 
-$ddBank = safeQuery($db, "SELECT DISTINCT SubCode, Sub_Name FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 5000");
+$ddBank = csrSafeQuery($db, "SELECT DISTINCT SubCode, Sub_Name FROM subgroup WHERE IFNULL(Sub_Name,'') <> '' ORDER BY Sub_Name LIMIT 5000");
 $ddWallet = $ddBank;
 
 $ddUnit = [];
 if (tableExists($db, 'unitmaster')) {
-    $ddUnit = safeQuery($db, "SELECT Unit_Code, Unit_Name FROM unitmaster ORDER BY Unit_Name");
+    $ddUnit = csrSafeQuery($db, "SELECT Unit_Code, Unit_Name FROM unitmaster ORDER BY Unit_Name");
 }
 if (empty($ddUnit)) {
     $uCol = firstExistingCol($db, 'product', ['Unit', 'Unit_Code', 'UNIT']);
-    if ($uCol) $ddUnit = safeQuery($db, "SELECT DISTINCT IFNULL(`$uCol`,'') AS Unit_Code, IFNULL(`$uCol`,'') AS Unit_Name FROM product WHERE IFNULL(`$uCol`,'') <> '' ORDER BY Unit_Name");
+    if ($uCol) $ddUnit = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$uCol`,'') AS Unit_Code, IFNULL(`$uCol`,'') AS Unit_Name FROM product WHERE IFNULL(`$uCol`,'') <> '' ORDER BY Unit_Name");
 }
 
 // Computer / User — only real sbill1 columns
 $ddComputer = [];
 $compCol = firstExistingCol($db, 'sbill1', ['Computer', 'Comp_Name', 'Machine', 'COMPUTER']);
 if ($compCol) {
-    $ddComputer = safeQuery($db, "SELECT DISTINCT IFNULL(`$compCol`,'') AS name FROM sbill1 WHERE IFNULL(`$compCol`,'') <> '' ORDER BY name");
+    $ddComputer = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$compCol`,'') AS name FROM sbill1 WHERE IFNULL(`$compCol`,'') <> '' ORDER BY name");
 }
 $ddUser = [];
 $userCol = firstExistingCol($db, 'sbill1', ['UserName', 'User_Name', 'User', 'USER_NAME']);
 if ($userCol) {
-    $ddUser = safeQuery($db, "SELECT DISTINCT IFNULL(`$userCol`,'') AS name FROM sbill1 WHERE IFNULL(`$userCol`,'') <> '' ORDER BY name");
+    $ddUser = csrSafeQuery($db, "SELECT DISTINCT IFNULL(`$userCol`,'') AS name FROM sbill1 WHERE IFNULL(`$userCol`,'') <> '' ORDER BY name");
 }
 if (empty($ddUser) && tableExists($db, 'users')) {
     $uc = firstExistingCol($db, 'users', ['UserName', 'User_Name', 'NAME', 'name']);
-    if ($uc) $ddUser = safeQuery($db, "SELECT `$uc` AS name FROM users ORDER BY name");
+    if ($uc) $ddUser = csrSafeQuery($db, "SELECT `$uc` AS name FROM users ORDER BY name");
 }
 
 // ── Group column map (.NET UPPER/LTRIM/RTRIM style) ─────────────────────────
@@ -1032,6 +1038,7 @@ function renderMs($id, $name, $dd, $valKey, $labelKey, $selected, $placeholder, 
 
 include '../includes/header.php';
 ?>
+<!-- CSR_BUILD_20260805_D46DAF4 -->
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
