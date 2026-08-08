@@ -403,13 +403,10 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
 <script>
   $(document).ready(function() {
     loadMemberDetails();
-    $("#payment_year_filter").on('change', loadMemberDetails);
-    $("#payment_month_filter").on('change', loadMemberDetails);
-    $("#filter_group").on('change', loadMemberDetails);
-    $("#filter_payment_method").on('change',loadMemberDetails)
-
-
-  })
+    $("#payment_year_filter, #payment_month_filter, #filter_group, #filter_payment_method")
+      .off('change.loadMembers')
+      .on('change.loadMembers', loadMemberDetails);
+  });
 
   function loadMemberDetails() {
     let month = $("#payment_month_filter").val();
@@ -693,9 +690,6 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
 
     });
   }
-
-  // Trigger on filter change
-  $("#payment_year_filter, #payment_month_filter").on('change', loadMemberDetails);
 
   // Select all checkbox
   $(document).on('change', '#select_all', function() {
