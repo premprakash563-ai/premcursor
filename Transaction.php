@@ -455,6 +455,8 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
         },
         
          dataSrc: function(json) {
+          // Server-side totals (esp. GTMS) — All Groups vs group-wise match ke liye
+          window.reportTotals = json.totals || null;
           if (json.data && json.data.length > 0) {
             currentMtd = json.data[0].mtd; 
             currentStd = json.data[0].std; 
@@ -462,7 +464,7 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
             $("#mtd").val(currentMtd);
             $("#std").val(currentStd);
           }
-          return json.data;
+          return json.data || [];
         }
         
         
@@ -667,17 +669,26 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
           return parseFloat(cleaned) || 0;
         };
 
-        var columnsToTotal = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12];
+        var columnsToTotal = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        // Prefer server totals for Open MS / MS / GTMS (All Groups accuracy)
+        var serverMap = {
+          2: window.reportTotals ? window.reportTotals.open_ms : null,
+          4: window.reportTotals ? window.reportTotals.ms : null,
+          12: window.reportTotals ? window.reportTotals.gtms : null
+        };
 
         columnsToTotal.forEach(function(colIndex) {
-          var total = api
-            .column(colIndex, {
-              page: 'all'
-            })
-            .data()
-            .reduce(function(a, b) {
-              return intVal(a) + intVal(b);
-            }, 0);
+          var total;
+          if (serverMap[colIndex] !== null && serverMap[colIndex] !== undefined) {
+            total = intVal(serverMap[colIndex]);
+          } else {
+            total = api
+              .column(colIndex, { page: 'all' })
+              .data()
+              .reduce(function(a, b) {
+                return intVal(a) + intVal(b);
+              }, 0);
+          }
 
           $(api.column(colIndex).footer()).html(
             total.toLocaleString(undefined, {

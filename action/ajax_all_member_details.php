@@ -13,20 +13,43 @@ $year  = (int)$_POST['year'];    // eg: 2025
 $group = !empty($_POST['group']) ? (int)$_POST['group'] : null;
 $payment_method = !empty($_POST['payment_method']) ? $_POST['payment_method'] : null;
 
-// Month name variants used in loan_payments.month (numeric / Nov / November)
 $monthShort = strtolower(date('M', mktime(0, 0, 0, $month, 1)));
 $monthLong  = strtolower(date('F', mktime(0, 0, 0, $month, 1)));
 
-/* =========================================================
-   MAIN QUERY
-   Fixes vs old version:
-   1) RCV prefers principal_portion (not full EMI amount) so Total
-      does not double-count INT/PF/Fine
-   2) Payments aggregated per member (duplicate payment rows were
-      inflating MS / Open MS / GTMS / Total)
-   3) All loan payments in the month are SUMmed (old query kept
-      only the latest loan_payment id)
-   ========================================================= */
+/**
+ * GTMS bug (All Groups vs single group):
+ * - All Groups pe pehle `group_id IS NULL` / invalid group wale members bhi aa jaate the
+ *   jo kisi bhi group filter me nahi dikhte → GTMS sum inflate
+ * - Isliye All Groups = sirf un members ka sum jo valid `groups` table me hain
+ *   (same set jo group-wise filters cover karte hain)
+ */
+$params = [
+    ':pay_year'    => $year,
+    ':pay_month'   => $month,
+    ':loan_year'   => $year,
+    ':loan_month'  => $month,
+    ':month_short' => $monthShort,
+    ':month_long'  => $monthLong,
+];
+
+$groupSql = "";
+if ($group !== null) {
+    // Specific group
+    $groupSql = " AND m.group_id = :group_id ";
+    $params[':group_id'] = $group;
+} else {
+    // All Groups → only members that belong to an existing group
+    // (NULL / deleted-group orphans exclude — tabhi All == sum of each group)
+    $groupSql = " AND m.group_id IS NOT NULL
+                  AND EXISTS (SELECT 1 FROM `groups` g WHERE g.id = m.group_id) ";
+}
+
+$methodSql = "";
+if ($payment_method !== null && $payment_method !== '') {
+    $methodSql = " AND p.payment_method = :method ";
+    $params[':method'] = $payment_method;
+}
+
 $sql = "
 SELECT 
     m.id AS member_id,
@@ -36,6 +59,7 @@ SELECT
     m.std_date,
     m.monthly_ms,
     m.open_ms AS registration_ms,
+    m.group_id,
     p.payment_amount,
     p.open_ms,
     p.payment_method,
@@ -51,6 +75,7 @@ LEFT JOIN (
     SELECT
         p1.member_id,
         SUM(COALESCE(p1.amount, 0)) AS payment_amount,
+        /* true opening = earliest payment row of this month */
         SUBSTRING_INDEX(
             GROUP_CONCAT(p1.open_ms ORDER BY p1.id ASC SEPARATOR '||'),
             '||', 1
@@ -92,12 +117,9 @@ LEFT JOIN (
     GROUP BY l.member_id
 ) lp ON lp.member_id = m.id
 
-WHERE (:group_id IS NULL OR m.group_id = :group_id2)
-AND (
-        :method1 IS NULL
-        OR :method2 = ''
-        OR p.payment_method = :method3
-    )
+WHERE 1=1
+{$groupSql}
+{$methodSql}
 
 ORDER BY
     m.monthly_ms ASC,
@@ -105,23 +127,11 @@ ORDER BY
 ";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute([
-    ':pay_year'     => $year,
-    ':pay_month'    => $month,
-    ':loan_year'    => $year,
-    ':loan_month'   => $month,
-    ':month_short'  => $monthShort,
-    ':month_long'   => $monthLong,
-    ':group_id'     => $group,
-    ':group_id2'    => $group,
-    ':method1'      => $payment_method,
-    ':method2'      => $payment_method,
-    ':method3'      => $payment_method,
-]);
+$stmt->execute($params);
 
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (!$rows) {
-    echo json_encode(['data' => []]);
+    echo json_encode(['data' => [], 'totals' => ['gtms' => 0]]);
     exit;
 }
 
@@ -142,7 +152,6 @@ function monthDiffInRange(
     if ($given < $start) {
         $given = clone $start;
     }
-
     if ($given > $end) {
         $given = clone $end;
     }
@@ -151,7 +160,6 @@ function monthDiffInRange(
         - ((int)$start->format('Y') * 12 + (int)$start->format('m'));
 }
 
-/** Normalize loan_payments.month: 11 / "11" / "Nov" / "November" */
 function loanMonthSortKey($monthValue): int
 {
     if ($monthValue === null || $monthValue === '') {
@@ -164,32 +172,79 @@ function loanMonthSortKey($monthValue): int
     return $ts === false ? 0 : (int)date('n', $ts);
 }
 
+/**
+ * Previous month closing MS:
+ * opening of that month (earliest row) + SUM(all amounts that month)
+ * (LIMIT 1 on a single payment row was wrong when multiple payments exist)
+ */
+function getPreviousClosingMs(PDO $pdo, int $memberId, int $year, int $month, $registrationMs): float
+{
+    $stmtLast = $pdo->prepare("
+        SELECT year, month
+        FROM payments
+        WHERE member_id = ?
+          AND (year < ? OR (year = ? AND month < ?))
+        ORDER BY year DESC, month DESC
+        LIMIT 1
+    ");
+    $stmtLast->execute([$memberId, $year, $year, $month]);
+    $last = $stmtLast->fetch(PDO::FETCH_ASSOC);
+
+    if (!$last) {
+        return (float)$registrationMs;
+    }
+
+    $py = (int)$last['year'];
+    $pm = (int)$last['month'];
+
+    $stmtClose = $pdo->prepare("
+        SELECT
+            (
+                SELECT open_ms
+                FROM payments
+                WHERE member_id = ? AND year = ? AND month = ?
+                ORDER BY id ASC
+                LIMIT 1
+            ) AS open_ms,
+            (
+                SELECT COALESCE(SUM(amount), 0)
+                FROM payments
+                WHERE member_id = ? AND year = ? AND month = ?
+            ) AS paid
+    ");
+    $stmtClose->execute([$memberId, $py, $pm, $memberId, $py, $pm]);
+    $close = $stmtClose->fetch(PDO::FETCH_ASSOC);
+
+    if (!$close || $close['open_ms'] === null || $close['open_ms'] === '') {
+        return (float)$registrationMs;
+    }
+
+    return (float)$close['open_ms'] + (float)$close['paid'];
+}
+
 $results = [];
+$sumGtms = 0.0;
+$sumMs = 0.0;
+$sumOpenMs = 0.0;
 
 foreach ($rows as $row) {
 
     $full_months = monthDiffInRange($row['std_date'], $row['mtd_date'], $month, $year) + 1;
     $expected_amount = $full_months * (float)$row['monthly_ms'];
 
-    $member_id  = $row['member_id'];
+    $member_id  = (int)$row['member_id'];
     $open_ms    = $row['open_ms'];
     $bal_amount = $row['bal_amount'];
 
     /* ================= MS CARRY FORWARD ================= */
     if ($open_ms === null || $open_ms === '') {
-
-        $stmtPrev = $pdo->prepare("
-            SELECT (open_ms + amount) AS last_total_ms
-            FROM payments
-            WHERE member_id = ?
-            AND (year < ? OR (year = ? AND month < ?))
-            ORDER BY year DESC, month DESC
-            LIMIT 1
-        ");
-        $stmtPrev->execute([$member_id, $year, $year, $month]);
-        $prev = $stmtPrev->fetch(PDO::FETCH_ASSOC);
-
-        $open_ms = $prev ? $prev['last_total_ms'] : $row['registration_ms'];
+        $open_ms = getPreviousClosingMs(
+            $pdo,
+            $member_id,
+            $year,
+            $month,
+            $row['registration_ms']
+        );
     }
 
     /* ================= LOAN BALANCE CARRY FORWARD ================= */
@@ -206,7 +261,6 @@ foreach ($rows as $row) {
         $calcYear  = $isFuture ? $currentYear : $givenYear;
         $calcMonth = $isFuture ? $currentMonth : $givenMonth;
 
-        // Do not rely on CAST(month AS UNSIGNED) — breaks for "Nov"/"November"
         $stmtLoanBal = $pdo->prepare("
             SELECT lp.bal_amount, lp.year, lp.month, lp.id
             FROM loan_payments lp
@@ -252,19 +306,22 @@ foreach ($rows as $row) {
         }
     }
 
-    /* ================= FINAL CALCULATIONS ================= */
     $ms_amt     = (float)($row['payment_amount'] ?? 0);
-    $loan_amt   = (float)($row['loan_amount'] ?? 0); // RCV = principal
+    $loan_amt   = (float)($row['loan_amount'] ?? 0);
     $int        = (float)($row['interest_portion'] ?? 0);
     $pf         = (float)($row['processing_fee'] ?? 0);
     $fine       = (float)($row['fine'] ?? 0);
     $ln_amt     = (float)($row['ln'] ?? 0);
     $pay_method = $row['payment_method'] ?? 'N/A';
+    $open_ms_f  = (float)$open_ms;
+    $gtms       = round($open_ms_f + $ms_amt, 2);
 
     $unpaid = ($ms_amt <= 0 && $loan_amt <= 0);
-
-    // Opening loan = closing bal + principal recovered - new loan issued
     $open_loan = (float)($bal_amount ?? 0) + $loan_amt - $ln_amt;
+
+    $sumGtms += $gtms;
+    $sumMs += $ms_amt;
+    $sumOpenMs += $open_ms_f;
 
     $results[] = [
         'DT_RowClass'     => $unpaid ? 'highlight-red' : '',
@@ -272,7 +329,7 @@ foreach ($rows as $row) {
         'std'             => date('M-y', strtotime($row['std_date'])),
         'mtd'             => date('M-y', strtotime($row['mtd_date'])),
         'name'            => htmlspecialchars($row['first_name'] . ' ' . $row['last_name']),
-        'open_ms'         => round((float)$open_ms, 2),
+        'open_ms'         => round($open_ms_f, 2),
         'open_loan'       => round($open_loan, 2),
         'ms'              => round($ms_amt, 2),
         'rcv'             => round($loan_amt, 2),
@@ -282,12 +339,20 @@ foreach ($rows as $row) {
         'total'           => round($ms_amt + $loan_amt + $int + $pf + $fine, 2),
         'ln'              => round($ln_amt, 2),
         'bal_ln'          => round((float)($bal_amount ?? 0), 2),
-        'gtms'            => round((float)$open_ms + $ms_amt, 2),
+        'gtms'            => $gtms,
         'is_unpaid'       => $unpaid,
         'expected_amount' => round((float)$expected_amount, 2),
         'payment_method'  => $pay_method,
     ];
 }
 
-echo json_encode(['data' => $results]);
+echo json_encode([
+    'data' => $results,
+    // Server-side totals so All Groups GTMS footer matches exact row math
+    'totals' => [
+        'open_ms' => round($sumOpenMs, 2),
+        'ms'      => round($sumMs, 2),
+        'gtms'    => round($sumGtms, 2),
+    ],
+]);
 exit;
