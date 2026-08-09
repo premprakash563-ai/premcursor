@@ -60,6 +60,7 @@ SELECT
     m.monthly_ms,
     m.open_ms AS registration_ms,
     m.group_id,
+    g.name AS group_name,
     p.payment_amount,
     p.open_ms,
     p.payment_method,
@@ -70,6 +71,7 @@ SELECT
     COALESCE(lp.ln, 0) AS ln,
     lp.bal_amount
 FROM members m
+LEFT JOIN `groups` g ON g.id = m.group_id
 
 LEFT JOIN (
     SELECT
@@ -226,6 +228,7 @@ $results = [];
 $sumGtms = 0.0;
 $sumMs = 0.0;
 $sumOpenMs = 0.0;
+$byGroup = []; // group_id => [name, gtms, members, open_ms, ms]
 
 foreach ($rows as $row) {
 
@@ -323,12 +326,31 @@ foreach ($rows as $row) {
     $sumMs += $ms_amt;
     $sumOpenMs += $open_ms_f;
 
+    $gid = $row['group_id'] !== null && $row['group_id'] !== '' ? (int)$row['group_id'] : 0;
+    $gname = $row['group_name'] ?: '(No Group)';
+    if (!isset($byGroup[$gid])) {
+        $byGroup[$gid] = [
+            'group_id' => $gid,
+            'group_name' => $gname,
+            'members' => 0,
+            'open_ms' => 0.0,
+            'ms' => 0.0,
+            'gtms' => 0.0,
+        ];
+    }
+    $byGroup[$gid]['members']++;
+    $byGroup[$gid]['open_ms'] += $open_ms_f;
+    $byGroup[$gid]['ms'] += $ms_amt;
+    $byGroup[$gid]['gtms'] += $gtms;
+
     $results[] = [
         'DT_RowClass'     => $unpaid ? 'highlight-red' : '',
         'select'          => '<input type="checkbox" class="row-select">',
         'std'             => date('M-y', strtotime($row['std_date'])),
         'mtd'             => date('M-y', strtotime($row['mtd_date'])),
         'name'            => htmlspecialchars($row['first_name'] . ' ' . $row['last_name']),
+        'group_id'        => $gid,
+        'group_name'      => htmlspecialchars($gname),
         'open_ms'         => round($open_ms_f, 2),
         'open_loan'       => round($open_loan, 2),
         'ms'              => round($ms_amt, 2),
@@ -346,13 +368,31 @@ foreach ($rows as $row) {
     ];
 }
 
+// Round group breakdown for JSON
+$byGroupOut = [];
+foreach ($byGroup as $g) {
+    $byGroupOut[] = [
+        'group_id'   => $g['group_id'],
+        'group_name' => $g['group_name'],
+        'members'    => $g['members'],
+        'open_ms'    => round($g['open_ms'], 2),
+        'ms'         => round($g['ms'], 2),
+        'gtms'       => round($g['gtms'], 2),
+    ];
+}
+usort($byGroupOut, function ($a, $b) {
+    return strcmp($a['group_name'], $b['group_name']);
+});
+
 echo json_encode([
     'data' => $results,
-    // Server-side totals so All Groups GTMS footer matches exact row math
     'totals' => [
-        'open_ms' => round($sumOpenMs, 2),
-        'ms'      => round($sumMs, 2),
-        'gtms'    => round($sumGtms, 2),
+        'open_ms'       => round($sumOpenMs, 2),
+        'ms'            => round($sumMs, 2),
+        'gtms'          => round($sumGtms, 2),
+        'member_count'  => count($results),
+        'group_count'   => count($byGroupOut),
     ],
+    'by_group' => $byGroupOut,
 ]);
 exit;

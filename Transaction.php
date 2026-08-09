@@ -386,6 +386,32 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
             <p id="no-results-message" class="text-center ds-text-muted py-4 d-none">
               No results found matching your criteria. Try adjusting your filters.
             </p>
+
+            <div id="gtms-group-breakdown" class="mt-3 p-3 border rounded d-none" style="background:#f8fafc;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>GTMS Group Breakdown (All Groups check)</strong>
+                <span id="gtms-diff-label" class="small"></span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm mb-0" id="gtms-group-table">
+                  <thead>
+                    <tr>
+                      <th>Group</th>
+                      <th class="text-end">Members</th>
+                      <th class="text-end">GTMS</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                  <tfoot>
+                    <tr>
+                      <th>Total</th>
+                      <th class="text-end" id="gtms-bd-members">0</th>
+                      <th class="text-end" id="gtms-bd-total">0</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -457,6 +483,8 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
          dataSrc: function(json) {
           // Server-side totals (esp. GTMS) — All Groups vs group-wise match ke liye
           window.reportTotals = json.totals || null;
+          window.reportByGroup = json.by_group || [];
+          renderGtmsGroupBreakdown(json);
           if (json.data && json.data.length > 0) {
             currentMtd = json.data[0].mtd; 
             currentStd = json.data[0].std; 
@@ -700,6 +728,48 @@ $groups = $pdo->query("SELECT * FROM `groups` ORDER BY name")->fetchAll();
       }
 
     });
+  }
+
+  function renderGtmsGroupBreakdown(json) {
+    var box = $('#gtms-group-breakdown');
+    var groupFilter = $('#filter_group').val();
+    var rows = json.by_group || [];
+    var totals = json.totals || {};
+
+    // Only show when All Groups selected
+    if (groupFilter) {
+      box.addClass('d-none');
+      return;
+    }
+
+    var tbody = box.find('tbody');
+    tbody.empty();
+    var sumGtms = 0;
+    var sumMembers = 0;
+
+    rows.forEach(function(g) {
+      sumGtms += parseFloat(g.gtms) || 0;
+      sumMembers += parseInt(g.members, 10) || 0;
+      tbody.append(
+        '<tr>' +
+          '<td>' + $('<div>').text(g.group_name).html() + ' <small class="text-muted">#' + g.group_id + '</small></td>' +
+          '<td class="text-end">' + g.members + '</td>' +
+          '<td class="text-end">' + Number(g.gtms).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+        '</tr>'
+      );
+    });
+
+    $('#gtms-bd-members').text(sumMembers);
+    $('#gtms-bd-total').text(sumGtms.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+    var allGtms = parseFloat(totals.gtms) || 0;
+    var diffLabel = 'Groups in result: ' + rows.length +
+      ' | All GTMS: ' + allGtms.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (rows.some(function(g) { return !g.group_id; })) {
+      diffLabel += ' | ⚠ No Group members included';
+    }
+    $('#gtms-diff-label').text(diffLabel);
+    box.removeClass('d-none');
   }
 
   // Select all checkbox
