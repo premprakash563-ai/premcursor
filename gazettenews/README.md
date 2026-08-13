@@ -19,14 +19,22 @@ This is **not** the commercial tagDiv Newspaper theme. It is a custom, GPL-licen
 Manage the homepage like Newspaper modules:
 
 1. **Appearance → Homepage Sections**
-2. Choose mode:
-   - **Section manager** — add / drag / enable / category / layout (recommended)
-   - **Block editor** — build the Front Page in Gutenberg (or Elementor if you use that plugin)
-   - **Both** — page content, then these modules
-3. Add modules: Featured mosaic, Posts (split / grid / list), Shop, Ad, Custom HTML
-4. Save
+2. Set **Section name**, **Place** (Left / Right / Full width), category, layout, **post count**
+3. Add ads in any column (image URL + link, or HTML)
+4. Drag to reorder. Buttons: Add full-width ad, Add right ad, Add left/right posts
+5. **Reset to India-news layout** restores big featured left + list right + ad slots
 
-In the block editor, insert **Gazette: Featured mosaic**, **Gazette: Posts module**, and **Gazette: Shop**.
+Block editor also has **Gazette: Featured mosaic**, **Gazette: Posts module**, and **Gazette: Shop**.
+
+Posts show **comment count** and **view count**. Single posts include Facebook, Twitter, WhatsApp, Telegram, LinkedIn, Email, and Copy link sharing.
+
+## Header (India News style)
+
+**Customize → Gazette News → Colors & Branding / Header**
+
+- Logo line 1 (red) + line 2 (black box), or a custom logo
+- Green menu color, red accent / BREAKING NEWS
+- Header 728×90 advertisement image, URL, or HTML
 
 ## Customize
 

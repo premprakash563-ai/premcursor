@@ -19,13 +19,17 @@ get_header();
 					<?php gazettenews_first_category(); ?>
 					<h1 class="entry-title"><?php the_title(); ?></h1>
 					<div class="entry-meta">
-						<?php gazettenews_posted_by(); ?>
+						<?php gazettenews_posted_by( true ); ?>
 						<span class="meta-sep">—</span>
 						<?php gazettenews_posted_on(); ?>
 						<span class="meta-sep">—</span>
 						<?php gazettenews_reading_time(); ?>
+						<span class="meta-sep">—</span>
+						<?php gazettenews_comments_count(); ?>
+						<span class="meta-sep">—</span>
+						<?php gazettenews_views_count(); ?>
 					</div>
-					<?php gazettenews_share_links(); ?>
+					<?php gazettenews_share_links( 'top' ); ?>
 				</header>
 
 				<?php if ( has_post_thumbnail() ) : ?>
@@ -45,6 +49,7 @@ get_header();
 				</div>
 
 				<footer class="entry-footer">
+					<?php gazettenews_share_links( 'bottom' ); ?>
 					<?php the_tags( '<div class="tag-list"><span>' . esc_html__( 'Tags', 'gazettenews' ) . '</span> ', '', '</div>' ); ?>
 				</footer>
 			</article>

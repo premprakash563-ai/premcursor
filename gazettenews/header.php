@@ -49,7 +49,17 @@
 					if ( has_custom_logo() ) {
 						the_custom_logo();
 					} else {
-						echo '<a class="site-title" href="' . esc_url( home_url( '/' ) ) . '">' . esc_html( get_bloginfo( 'name' ) ) . '</a>';
+						$line1 = get_theme_mod( 'gazettenews_logo_line1' );
+						$line2 = get_theme_mod( 'gazettenews_logo_line2', 'NEWS 24x7' );
+						if ( ! $line1 ) {
+							$line1 = get_bloginfo( 'name' );
+						}
+						echo '<a class="brand-lockup" href="' . esc_url( home_url( '/' ) ) . '">';
+						echo '<span class="brand-hi">' . esc_html( $line1 ) . '</span>';
+						if ( $line2 ) {
+							echo '<span class="brand-en">' . esc_html( $line2 ) . '</span>';
+						}
+						echo '</a>';
 					}
 					$tag = get_theme_mod( 'gazettenews_tagline', __( 'News & Magazine', 'gazettenews' ) );
 					if ( $tag ) {
@@ -57,11 +67,7 @@
 					}
 					?>
 				</div>
-				<?php if ( is_active_sidebar( 'header-ad' ) ) : ?>
-					<div class="header-ad">
-						<?php dynamic_sidebar( 'header-ad' ); ?>
-					</div>
-				<?php endif; ?>
+				<?php gazettenews_header_ad(); ?>
 			</div>
 		</div>
 

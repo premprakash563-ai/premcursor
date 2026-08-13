@@ -21,13 +21,43 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_accent', array(
-		'default'           => '#4db2ec',
+		'default'           => '#d61f26',
 		'sanitize_callback' => 'sanitize_hex_color',
 	) );
 	$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'gazettenews_accent', array(
-		'label'   => __( 'Accent color', 'gazettenews' ),
+		'label'   => __( 'Accent / Breaking / category color', 'gazettenews' ),
 		'section' => 'gazettenews_branding',
 	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_menu_color', array(
+		'default'           => '#1b5e4b',
+		'sanitize_callback' => 'sanitize_hex_color',
+	) );
+	$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'gazettenews_menu_color', array(
+		'label'   => __( 'Menu & overlay color', 'gazettenews' ),
+		'section' => 'gazettenews_branding',
+	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_logo_line1', array(
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_text_field',
+	) );
+	$wp_customize->add_control( 'gazettenews_logo_line1', array(
+		'label'       => __( 'Logo line 1 (red Hindi/title)', 'gazettenews' ),
+		'description' => __( 'Leave empty to use the site name. Upload a logo in Site Identity to replace this lockup.', 'gazettenews' ),
+		'section'     => 'gazettenews_branding',
+		'type'        => 'text',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_logo_line2', array(
+		'default'           => 'NEWS 24x7',
+		'sanitize_callback' => 'sanitize_text_field',
+	) );
+	$wp_customize->add_control( 'gazettenews_logo_line2', array(
+		'label'   => __( 'Logo line 2 (black box)', 'gazettenews' ),
+		'section' => 'gazettenews_branding',
+		'type'    => 'text',
+	) );
 
 	$wp_customize->add_setting( 'gazettenews_tagline', array(
 		'default'           => __( 'News & Magazine', 'gazettenews' ),
@@ -55,7 +85,7 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_breaking_label', array(
-		'default'           => __( 'BREAKING', 'gazettenews' ),
+		'default'           => __( 'BREAKING NEWS', 'gazettenews' ),
 		'sanitize_callback' => 'sanitize_text_field',
 	) );
 	$wp_customize->add_control( 'gazettenews_breaking_label', array(
@@ -72,6 +102,35 @@ function gazettenews_customize_register( $wp_customize ) {
 		'label'   => __( 'Breaking ticker post count', 'gazettenews' ),
 		'section' => 'gazettenews_header',
 		'type'    => 'number',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_header_ad_image', array(
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	) );
+	$wp_customize->add_control( new WP_Customize_Image_Control( $wp_customize, 'gazettenews_header_ad_image', array(
+		'label'   => __( 'Header advertisement image (728×90)', 'gazettenews' ),
+		'section' => 'gazettenews_header',
+	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_header_ad_url', array(
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	) );
+	$wp_customize->add_control( 'gazettenews_header_ad_url', array(
+		'label'   => __( 'Header ad click URL', 'gazettenews' ),
+		'section' => 'gazettenews_header',
+		'type'    => 'url',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_header_ad_code', array(
+		'default'           => '',
+		'sanitize_callback' => 'wp_kses_post',
+	) );
+	$wp_customize->add_control( 'gazettenews_header_ad_code', array(
+		'label'   => __( 'Or header ad HTML', 'gazettenews' ),
+		'section' => 'gazettenews_header',
+		'type'    => 'textarea',
 	) );
 
 	$wp_customize->add_section( 'gazettenews_home', array(

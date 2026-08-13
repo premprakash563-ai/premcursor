@@ -1,8 +1,9 @@
 /* Gazette News — Newspaper-style news & WooCommerce theme */
 
 :root {
-  --gn-accent: #4db2ec;
-  --gn-accent-dark: #2a9ad9;
+  --gn-accent: #d61f26;
+  --gn-accent-dark: #b41820;
+  --gn-menu: #1b5e4b;
   --gn-ink: #111111;
   --gn-muted: #777777;
   --gn-line: #e8e8e8;
@@ -11,7 +12,7 @@
   --gn-dark: #222222;
   --gn-header: #111111;
   --gn-max: 1240px;
-  --gn-sans: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  --gn-sans: "Noto Sans Devanagari", "Inter", "Segoe UI", Roboto, Arial, sans-serif;
   --gn-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --gn-radius: 2px;
 }
@@ -109,6 +110,29 @@ button, input, textarea { font-family: inherit; }
   padding: 22px 0;
 }
 .site-branding { min-width: 180px; }
+.brand-lockup {
+  display: flex;
+  align-items: stretch;
+  text-decoration: none;
+  color: inherit;
+  line-height: 1;
+}
+.brand-hi {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--gn-accent);
+  padding-right: 8px;
+}
+.brand-en {
+  display: flex;
+  align-items: center;
+  background: #111;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+}
 .site-title {
   font-size: 38px;
   font-weight: 800;
@@ -126,13 +150,34 @@ button, input, textarea { font-family: inherit; }
   letter-spacing: 0.16em;
 }
 .custom-logo-link img { max-height: 72px; width: auto; }
-.header-ad { margin-left: auto; }
+.header-ad { margin-left: auto; min-width: 280px; max-width: 728px; }
 .header-ad .widget { margin: 0; }
 .header-ad .widget-title { display: none; }
+.ad-kicker {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #999;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.ad-placeholder {
+  border: 1px dashed #ccc;
+  background: repeating-linear-gradient(45deg, #fafafa, #fafafa 8px, #f0f0f0 8px, #f0f0f0 16px);
+  color: #888;
+  font-size: 12px;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+}
+.ad-in-col .ad-placeholder { min-height: 250px; }
 
 /* Nav */
 .main-nav {
-  background: var(--gn-header);
+  background: var(--gn-menu);
   position: relative;
   z-index: 40;
 }
@@ -218,8 +263,8 @@ button, input, textarea { font-family: inherit; }
 
 /* Breaking */
 .breaking-bar {
-  background: #f3f3f3;
-  border-bottom: 1px solid var(--gn-line);
+  background: #111;
+  border-bottom: 0;
 }
 .breaking-inner {
   display: flex;
@@ -246,7 +291,8 @@ button, input, textarea { font-family: inherit; }
   padding: 10px 20px;
   white-space: nowrap;
 }
-.breaking-list a { font-weight: 600; font-size: 13px; }
+.breaking-list a { font-weight: 600; font-size: 13px; color: #fff; }
+.breaking-list a:hover { color: var(--gn-accent); }
 .breaking-track:hover .breaking-list { animation-play-state: paused; }
 
 @keyframes gn-ticker {
@@ -299,8 +345,6 @@ button, input, textarea { font-family: inherit; }
 .mosaic-meta { color: #ccc; font-size: 12px; }
 .mosaic-item:hover img { transform: scale(1.04); transition: transform .4s ease; }
 
-.home-ad-slot { margin-top: 20px; text-align: center; }
-
 /* Modules */
 .module { margin-bottom: 36px; }
 .module-header {
@@ -320,7 +364,7 @@ button, input, textarea { font-family: inherit; }
 .module-title span,
 .widget-title span {
   display: inline-block;
-  background: var(--gn-accent);
+  background: var(--gn-menu);
   color: #fff;
   padding: 7px 12px;
   position: relative;
@@ -457,13 +501,23 @@ button, input, textarea { font-family: inherit; }
 .entry-content a { color: var(--gn-accent); }
 .gn-share { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0; }
 .gn-share span { font-size: 12px; font-weight: 800; text-transform: uppercase; }
-.gn-share a {
-  border: 1px solid var(--gn-line);
-  padding: 4px 10px;
+.gn-share a, .gn-share button {
+  border: 0;
+  padding: 6px 10px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
+  color: #fff !important;
+  cursor: pointer;
 }
+.share-facebook { background: #1877f2; }
+.share-twitter { background: #111; }
+.share-whatsapp { background: #25d366; }
+.share-telegram { background: #229ed9; }
+.share-linkedin { background: #0a66c2; }
+.share-email, .share-copy { background: #555; }
+.meta-author { display: inline-flex; align-items: center; gap: 6px; }
+.meta-author img { border-radius: 50%; width: 22px; height: 22px; }
 .tag-list { margin-top: 24px; }
 .tag-list a {
   display: inline-block;
@@ -554,9 +608,47 @@ button, input, textarea { font-family: inherit; }
 .module-shop-link { display: none; }
 .front-page-content { margin-bottom: 28px; }
 
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) 340px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+.home-col .mosaic-grid { grid-template-columns: 1fr; grid-template-rows: none; }
+.home-col .mosaic-1 { grid-column: auto; grid-row: auto; }
+.card-overlay { position: relative; overflow: hidden; background: #111; margin-bottom: 16px; }
+.overlay-link { display: block; color: #fff; min-height: 420px; }
+.overlay-link img, .card-overlay .thumb-fallback {
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+}
+.overlay-panel {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 24px 20px 18px;
+  background: linear-gradient(transparent, rgba(27, 94, 75, 0.95));
+  color: #fff;
+}
+.overlay-panel h2 { font-size: 28px; color: #fff; margin: 8px 0 8px; }
+.overlay-meta { color: #e7efe9; font-size: 13px; }
+.card-thumbs {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gn-line);
+}
+.card-thumbs .entry-title { font-size: 15px; margin: 0 0 6px; }
+.card-thumbs .thumb img { width: 92px; height: 70px; object-fit: cover; }
+.home-ad-slot { margin: 16px 0; text-align: center; }
+.home-ad-slot img { margin: 0 auto; }
+
 @media (max-width: 1024px) {
   .layout-with-sidebar,
-  .gn-shop-layout { grid-template-columns: 1fr; }
+  .gn-shop-layout,
+  .home-columns { grid-template-columns: 1fr; }
   .mosaic-grid {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 240px 200px 200px;
@@ -580,7 +672,7 @@ button, input, textarea { font-family: inherit; }
     left: 0;
     padding: 8px 16px 16px;
   }
-  .main-nav.is-open .menu { display: flex; }
+  .main-nav.is-open .menu { display: flex; background: var(--gn-menu); }
   .main-nav .sub-menu { position: static; display: block; box-shadow: none; background: #111; }
   .main-nav .sub-menu a { color: #ccc; }
   .mosaic-grid { grid-template-columns: 1fr; grid-template-rows: none; }

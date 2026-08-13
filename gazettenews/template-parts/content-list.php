@@ -16,7 +16,7 @@
 	<div class="card-body">
 		<?php gazettenews_first_category(); ?>
 		<h3 class="entry-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-		<?php gazettenews_entry_meta( false ); ?>
+		<?php gazettenews_entry_meta(); ?>
 		<div class="entry-excerpt"><?php the_excerpt(); ?></div>
 	</div>
 </article>

@@ -27,4 +27,15 @@
   if (list && list.children.length) {
     list.innerHTML = list.innerHTML + list.innerHTML;
   }
+
+  document.querySelectorAll('.share-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var url = btn.getAttribute('data-url') || '';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () {
+          btn.textContent = btn.getAttribute('data-done') || 'Copied';
+        });
+      }
+    });
+  });
 })();

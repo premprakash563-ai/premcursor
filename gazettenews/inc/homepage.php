@@ -1,6 +1,6 @@
 <?php
 /**
- * Homepage section manager (tagDiv-style modules, without tagDiv Composer).
+ * Homepage section manager.
  *
  * @package GazetteNews
  */
@@ -9,14 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Allowed section types.
- */
 function gazettenews_section_types() {
 	return array(
-		'mosaic' => __( 'Featured mosaic', 'gazettenews' ),
-		'ad'     => __( 'Advertisement / widget slot', 'gazettenews' ),
+		'hero'   => __( 'Big featured story', 'gazettenews' ),
 		'posts'  => __( 'Posts module', 'gazettenews' ),
+		'mosaic' => __( 'Featured mosaic', 'gazettenews' ),
+		'ad'     => __( 'Advertisement', 'gazettenews' ),
 		'shop'   => __( 'WooCommerce products', 'gazettenews' ),
 		'html'   => __( 'Custom HTML', 'gazettenews' ),
 	);
@@ -24,63 +22,115 @@ function gazettenews_section_types() {
 
 function gazettenews_section_layouts() {
 	return array(
-		'split' => __( 'Split (big + list)', 'gazettenews' ),
-		'grid'  => __( 'Grid', 'gazettenews' ),
-		'list'  => __( 'List', 'gazettenews' ),
+		'hero'   => __( 'Big overlay image', 'gazettenews' ),
+		'thumbs' => __( 'Headline + thumb (right)', 'gazettenews' ),
+		'split'  => __( 'Split (big + list)', 'gazettenews' ),
+		'grid'   => __( 'Grid', 'gazettenews' ),
+		'list'   => __( 'List', 'gazettenews' ),
+	);
+}
+
+function gazettenews_section_positions() {
+	return array(
+		'full'  => __( 'Full width', 'gazettenews' ),
+		'left'  => __( 'Left column', 'gazettenews' ),
+		'right' => __( 'Right column', 'gazettenews' ),
 	);
 }
 
 function gazettenews_default_home_sections() {
-	$mods = array();
-	for ( $i = 1; $i <= 4; $i++ ) {
-		$mods[] = array(
-			'id'      => 'posts-' . $i,
-			'type'    => 'posts',
-			'enabled' => true,
-			'title'   => (string) get_theme_mod( "gazettenews_mod_{$i}_title", '' ),
-			'cat'     => absint( get_theme_mod( "gazettenews_mod_{$i}_cat", 0 ) ),
-			'layout'  => array( 'split', 'grid', 'list', 'grid' )[ $i - 1 ],
-			'count'   => ( 2 === $i || 4 === $i ) ? 6 : 5,
-			'html'    => '',
-		);
-	}
-
-	return array_merge(
+	return array(
 		array(
-			array(
-				'id'      => 'mosaic',
-				'type'    => 'mosaic',
-				'enabled' => true,
-				'title'   => '',
-				'cat'     => 0,
-				'layout'  => 'mosaic',
-				'count'   => max( 3, min( 5, absint( get_theme_mod( 'gazettenews_featured_count', 5 ) ) ) ),
-				'html'    => '',
-			),
-			array(
-				'id'      => 'ad',
-				'type'    => 'ad',
-				'enabled' => true,
-				'title'   => '',
-				'cat'     => 0,
-				'layout'  => '',
-				'count'   => 0,
-				'html'    => '',
-			),
+			'id'       => 'hero',
+			'type'     => 'hero',
+			'enabled'  => true,
+			'title'    => '',
+			'cat'      => 0,
+			'layout'   => 'hero',
+			'count'    => 1,
+			'position' => 'left',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
 		),
-		$mods,
 		array(
-			array(
-				'id'      => 'shop',
-				'type'    => 'shop',
-				'enabled' => (bool) get_theme_mod( 'gazettenews_show_shop', true ),
-				'title'   => __( 'Shop', 'gazettenews' ),
-				'cat'     => 0,
-				'layout'  => 'grid',
-				'count'   => 4,
-				'html'    => '',
-			),
-		)
+			'id'       => 'side-latest',
+			'type'     => 'posts',
+			'enabled'  => true,
+			'title'    => '',
+			'cat'      => 0,
+			'layout'   => 'thumbs',
+			'count'    => 6,
+			'position' => 'right',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
+		array(
+			'id'       => 'ad-full',
+			'type'     => 'ad',
+			'enabled'  => true,
+			'title'    => __( '- Advertisement -', 'gazettenews' ),
+			'cat'      => 0,
+			'layout'   => '',
+			'count'    => 1,
+			'position' => 'full',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
+		array(
+			'id'       => 'posts-1',
+			'type'     => 'posts',
+			'enabled'  => true,
+			'title'    => (string) get_theme_mod( 'gazettenews_mod_1_title', __( 'Latest News', 'gazettenews' ) ),
+			'cat'      => absint( get_theme_mod( 'gazettenews_mod_1_cat', 0 ) ),
+			'layout'   => 'split',
+			'count'    => 5,
+			'position' => 'left',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
+		array(
+			'id'       => 'ad-side',
+			'type'     => 'ad',
+			'enabled'  => true,
+			'title'    => __( '- Advertisement -', 'gazettenews' ),
+			'cat'      => 0,
+			'layout'   => '',
+			'count'    => 1,
+			'position' => 'right',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
+		array(
+			'id'       => 'posts-2',
+			'type'     => 'posts',
+			'enabled'  => true,
+			'title'    => (string) get_theme_mod( 'gazettenews_mod_2_title', '' ),
+			'cat'      => absint( get_theme_mod( 'gazettenews_mod_2_cat', 0 ) ),
+			'layout'   => 'grid',
+			'count'    => 6,
+			'position' => 'left',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
+		array(
+			'id'       => 'shop',
+			'type'     => 'shop',
+			'enabled'  => (bool) get_theme_mod( 'gazettenews_show_shop', true ),
+			'title'    => __( 'Shop', 'gazettenews' ),
+			'cat'      => 0,
+			'layout'   => 'grid',
+			'count'    => 4,
+			'position' => 'left',
+			'html'     => '',
+			'image'    => '',
+			'link'     => '',
+		),
 	);
 }
 
@@ -104,6 +154,7 @@ function gazettenews_get_home_sections() {
 function gazettenews_sanitize_section( $row ) {
 	$types   = array_keys( gazettenews_section_types() );
 	$layouts = array_keys( gazettenews_section_layouts() );
+	$places  = array_keys( gazettenews_section_positions() );
 	$type    = isset( $row['type'] ) ? sanitize_key( $row['type'] ) : 'posts';
 	if ( ! in_array( $type, $types, true ) ) {
 		$type = 'posts';
@@ -112,27 +163,28 @@ function gazettenews_sanitize_section( $row ) {
 	if ( 'posts' === $type && ! in_array( $layout, $layouts, true ) ) {
 		$layout = 'grid';
 	}
+	if ( 'hero' === $type ) {
+		$layout = 'hero';
+	}
+	$position = isset( $row['position'] ) ? sanitize_key( $row['position'] ) : '';
+	if ( ! in_array( $position, $places, true ) ) {
+		$position = ( 'mosaic' === $type || 'ad' === $type ) ? 'full' : 'left';
+	}
 	return array(
-		'id'      => isset( $row['id'] ) ? sanitize_key( $row['id'] ) : uniqid( 'sec-', false ),
-		'type'    => $type,
-		'enabled' => ! empty( $row['enabled'] ),
-		'title'   => isset( $row['title'] ) ? sanitize_text_field( $row['title'] ) : '',
-		'cat'     => isset( $row['cat'] ) ? absint( $row['cat'] ) : 0,
-		'layout'  => $layout,
-		'count'   => isset( $row['count'] ) ? min( 12, max( 1, absint( $row['count'] ) ) ) : 4,
-		'html'    => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
+		'id'       => isset( $row['id'] ) ? sanitize_key( $row['id'] ) : uniqid( 'sec-', false ),
+		'type'     => $type,
+		'enabled'  => ! empty( $row['enabled'] ),
+		'title'    => isset( $row['title'] ) ? sanitize_text_field( $row['title'] ) : '',
+		'cat'      => isset( $row['cat'] ) ? absint( $row['cat'] ) : 0,
+		'layout'   => $layout,
+		'count'    => isset( $row['count'] ) ? min( 12, max( 1, absint( $row['count'] ) ) ) : 4,
+		'position' => $position,
+		'html'     => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
+		'image'    => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
+		'link'     => isset( $row['link'] ) ? esc_url_raw( $row['link'] ) : '',
 	);
 }
 
-function gazettenews_section_is_fullwidth( $type ) {
-	return in_array( $type, array( 'mosaic', 'ad' ), true );
-}
-
-/**
- * Render the magazine homepage from saved sections.
- *
- * @param int[] $used_ids Post IDs already shown (passed by reference).
- */
 function gazettenews_render_homepage() {
 	$mode = gazettenews_get_home_mode();
 	$used = array();
@@ -153,58 +205,61 @@ function gazettenews_render_homepage() {
 	}
 
 	$sections = gazettenews_get_home_sections();
-	$open     = false;
+	$left     = array();
+	$right    = array();
 
 	echo '<div class="magazine-wrap">';
 	foreach ( $sections as $section ) {
 		if ( empty( $section['enabled'] ) ) {
 			continue;
 		}
-		$full = gazettenews_section_is_fullwidth( $section['type'] );
-		if ( $full && $open ) {
-			gazettenews_homepage_layout_close();
-			$open = false;
+		$pos = $section['position'];
+		if ( 'full' === $pos || 'mosaic' === $section['type'] && 'full' === $pos ) {
+			gazettenews_flush_home_columns( $left, $right, $used );
+			$left  = array();
+			$right = array();
+			gazettenews_render_section( $section, $used, false );
+			continue;
 		}
-		if ( ! $full && ! $open ) {
-			gazettenews_homepage_layout_open();
-			$open = true;
+		if ( 'right' === $pos ) {
+			$right[] = $section;
+		} else {
+			$left[] = $section;
 		}
-		gazettenews_render_section( $section, $used );
 	}
-	if ( $open ) {
-		gazettenews_homepage_layout_close();
+	gazettenews_flush_home_columns( $left, $right, $used );
+	echo '</div>';
+}
+
+function gazettenews_flush_home_columns( $left, $right, &$used ) {
+	if ( empty( $left ) && empty( $right ) ) {
+		return;
 	}
-	echo '</div>';
+	echo '<div class="gn-container home-columns">';
+	echo '<div class="home-col home-col-left">';
+	foreach ( $left as $section ) {
+		gazettenews_render_section( $section, $used, true );
+	}
+	echo '</div><div class="home-col home-col-right">';
+	foreach ( $right as $section ) {
+		gazettenews_render_section( $section, $used, true );
+	}
+	if ( empty( $right ) && is_active_sidebar( 'sidebar-1' ) ) {
+		echo '<aside class="sidebar widget-area">';
+		dynamic_sidebar( 'sidebar-1' );
+		echo '</aside>';
+	}
+	echo '</div></div>';
 }
 
-function gazettenews_homepage_layout_open() {
-	echo '<div class="gn-container layout-with-sidebar magazine-body"><div class="content-area">';
-}
-
-function gazettenews_homepage_layout_close() {
-	echo '</div>';
-	get_sidebar();
-	echo '</div>';
-}
-
-/**
- * @param array $section Section config.
- * @param int[] $used    Shown post IDs (by reference).
- */
-function gazettenews_render_section( $section, &$used ) {
+function gazettenews_render_section( $section, &$used, $in_column = false ) {
 	$type = $section['type'];
 	if ( 'mosaic' === $type ) {
-		gazettenews_render_mosaic( $section, $used );
+		gazettenews_render_mosaic( $section, $used, $in_column );
 		return;
 	}
 	if ( 'ad' === $type ) {
-		if ( ! empty( $section['html'] ) ) {
-			echo '<div class="gn-container home-ad-slot">' . wp_kses_post( $section['html'] ) . '</div>';
-		} elseif ( is_active_sidebar( 'home-after-hero' ) ) {
-			echo '<div class="gn-container home-ad-slot">';
-			dynamic_sidebar( 'home-after-hero' );
-			echo '</div>';
-		}
+		gazettenews_render_ad_unit( $section, $in_column );
 		return;
 	}
 	if ( 'html' === $type && ! empty( $section['html'] ) ) {
@@ -215,12 +270,15 @@ function gazettenews_render_section( $section, &$used ) {
 		gazettenews_home_products( $section['count'], $section['title'] );
 		return;
 	}
-	if ( 'posts' === $type ) {
+	if ( 'hero' === $type || 'posts' === $type ) {
+		if ( 'hero' === $type ) {
+			$section['layout'] = 'hero';
+		}
 		gazettenews_render_posts_module( $section, $used );
 	}
 }
 
-function gazettenews_render_mosaic( $section, &$used ) {
+function gazettenews_render_mosaic( $section, &$used, $in_column = false ) {
 	$count  = max( 3, min( 5, absint( $section['count'] ) ) );
 	$sticky = get_option( 'sticky_posts' );
 	$fargs  = array(
@@ -237,8 +295,8 @@ function gazettenews_render_mosaic( $section, &$used ) {
 	$featured = gazettenews_query( $fargs );
 
 	if ( ! $featured->have_posts() || $featured->post_count < $count ) {
-		$exclude = wp_list_pluck( $featured->posts, 'ID' );
-		$needed  = $count - $featured->post_count;
+		$exclude   = wp_list_pluck( $featured->posts, 'ID' );
+		$needed    = $count - $featured->post_count;
 		$fill_args = array(
 			'posts_per_page' => $needed,
 			'post__not_in'   => $exclude,
@@ -246,19 +304,23 @@ function gazettenews_render_mosaic( $section, &$used ) {
 		if ( ! empty( $section['cat'] ) ) {
 			$fill_args['cat'] = absint( $section['cat'] );
 		}
-		$fill = gazettenews_query( $fill_args );
-		$featured->posts      = array_merge( $featured->posts, $fill->posts );
-		$featured->post_count = count( $featured->posts );
+		$fill                     = gazettenews_query( $fill_args );
+		$featured->posts          = array_merge( $featured->posts, $fill->posts );
+		$featured->post_count     = count( $featured->posts );
 	}
 
 	if ( ! $featured->posts ) {
 		return;
 	}
 
-	$used = array_merge( $used, wp_list_pluck( $featured->posts, 'ID' ) );
+	$used  = array_merge( $used, wp_list_pluck( $featured->posts, 'ID' ) );
+	$wrap  = $in_column ? '' : 'gn-container ';
 	?>
 	<section class="featured-mosaic">
-		<div class="gn-container mosaic-grid mosaic-count-<?php echo esc_attr( (string) min( 5, $featured->post_count ) ); ?>">
+		<?php if ( $section['title'] ) : ?>
+			<div class="<?php echo esc_attr( $wrap ); ?>"><?php gazettenews_module_header( $section['title'], absint( $section['cat'] ) ); ?></div>
+		<?php endif; ?>
+		<div class="<?php echo esc_attr( $wrap ); ?>mosaic-grid mosaic-count-<?php echo esc_attr( (string) min( 5, $featured->post_count ) ); ?>">
 			<?php
 			$i = 0;
 			foreach ( $featured->posts as $post ) {
@@ -281,7 +343,7 @@ function gazettenews_render_mosaic( $section, &$used ) {
 							}
 							?>
 							<h2><?php the_title(); ?></h2>
-							<span class="mosaic-meta"><?php echo esc_html( get_the_date() ); ?> · <?php the_author(); ?></span>
+							<span class="mosaic-meta"><?php echo esc_html( get_the_author() ); ?> · <?php echo esc_html( get_the_date() ); ?> · <?php echo esc_html( get_comments_number() ); ?></span>
 						</span>
 					</a>
 				</article>
@@ -297,11 +359,11 @@ function gazettenews_render_mosaic( $section, &$used ) {
 function gazettenews_render_posts_module( $section, &$used ) {
 	$cat_id = absint( $section['cat'] );
 	$title  = $section['title'];
-	if ( ! $title ) {
-		$title = $cat_id ? get_cat_name( $cat_id ) : __( 'Latest News', 'gazettenews' );
-	}
 	$layout = $section['layout'];
 	$count  = absint( $section['count'] );
+	if ( 'hero' === $layout && $count < 1 ) {
+		$count = 1;
+	}
 
 	$qargs = array(
 		'posts_per_page' => $count,
@@ -318,7 +380,21 @@ function gazettenews_render_posts_module( $section, &$used ) {
 	echo '<section class="module module-' . esc_attr( $layout ) . '">';
 	gazettenews_module_header( $title, $cat_id );
 
-	if ( 'split' === $layout ) {
+	if ( 'hero' === $layout ) {
+		while ( $mod->have_posts() ) {
+			$mod->the_post();
+			$used[] = get_the_ID();
+			get_template_part( 'template-parts/content', 'overlay' );
+		}
+	} elseif ( 'thumbs' === $layout ) {
+		echo '<div class="thumbs-module">';
+		while ( $mod->have_posts() ) {
+			$mod->the_post();
+			$used[] = get_the_ID();
+			get_template_part( 'template-parts/content', 'thumbs' );
+		}
+		echo '</div>';
+	} elseif ( 'split' === $layout ) {
 		echo '<div class="split-module">';
 		$n = 0;
 		while ( $mod->have_posts() ) {

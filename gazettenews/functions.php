@@ -17,6 +17,7 @@ require_once GAZETTENEWS_DIR . '/inc/template-tags.php';
 require_once GAZETTENEWS_DIR . '/inc/customizer.php';
 require_once GAZETTENEWS_DIR . '/inc/widgets.php';
 require_once GAZETTENEWS_DIR . '/inc/woocommerce.php';
+require_once GAZETTENEWS_DIR . '/inc/ads.php';
 require_once GAZETTENEWS_DIR . '/inc/homepage.php';
 require_once GAZETTENEWS_DIR . '/inc/blocks.php';
 if ( is_admin() ) {
@@ -107,7 +108,7 @@ add_action( 'widgets_init', 'gazettenews_widgets_init' );
 function gazettenews_scripts() {
 	wp_enqueue_style(
 		'gazettenews-fonts',
-		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap',
+		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap',
 		array(),
 		null
 	);
@@ -126,8 +127,15 @@ function gazettenews_scripts() {
 		GAZETTENEWS_VERSION
 	);
 
-	$accent = get_theme_mod( 'gazettenews_accent', '#4db2ec' );
-	$css    = ':root{--gn-accent:' . sanitize_hex_color( $accent ) . ';}';
+	$accent = sanitize_hex_color( get_theme_mod( 'gazettenews_accent', '#d61f26' ) );
+	$menu   = sanitize_hex_color( get_theme_mod( 'gazettenews_menu_color', '#1b5e4b' ) );
+	if ( ! $accent ) {
+		$accent = '#d61f26';
+	}
+	if ( ! $menu ) {
+		$menu = '#1b5e4b';
+	}
+	$css = ':root{--gn-accent:' . $accent . ';--gn-menu:' . $menu . ';}';
 	wp_add_inline_style( 'gazettenews-main', $css );
 
 	wp_enqueue_script(

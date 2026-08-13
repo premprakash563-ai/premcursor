@@ -10,7 +10,7 @@ $q     = gazettenews_query( array( 'posts_per_page' => $count ) );
 if ( ! $q->have_posts() ) {
 	return;
 }
-$label = get_theme_mod( 'gazettenews_breaking_label', __( 'BREAKING', 'gazettenews' ) );
+$label = get_theme_mod( 'gazettenews_breaking_label', __( 'BREAKING NEWS', 'gazettenews' ) );
 ?>
 <div class="breaking-bar">
 	<div class="gn-container breaking-inner">

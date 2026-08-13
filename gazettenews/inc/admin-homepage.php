@@ -38,6 +38,13 @@ function gazettenews_admin_homepage_save() {
 		return;
 	}
 
+	if ( isset( $_POST['gazettenews_reset_home'] ) ) {
+		delete_option( 'gazettenews_home_sections' );
+		update_option( 'gazettenews_home_mode', 'sections' );
+		add_settings_error( 'gazettenews_home', 'reset', __( 'Homepage reset to the default left/right news layout.', 'gazettenews' ), 'updated' );
+		return;
+	}
+
 	$mode = isset( $_POST['home_mode'] ) ? sanitize_key( wp_unslash( $_POST['home_mode'] ) ) : 'sections';
 	if ( ! in_array( $mode, array( 'sections', 'gutenberg', 'both' ), true ) ) {
 		$mode = 'sections';
@@ -102,7 +109,7 @@ function gazettenews_admin_homepage_page() {
 			</table>
 
 			<h2><?php esc_html_e( 'Modules', 'gazettenews' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Drag the handle to reorder. Toggle Enabled to hide a block without deleting it.', 'gazettenews' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Add sections, change the Title (section name), set Left / Right / Full width, then drag to reorder. Ads can go in any column.', 'gazettenews' ); ?></p>
 
 			<div id="gn-sections" class="gn-sections">
 				<?php
@@ -113,10 +120,15 @@ function gazettenews_admin_homepage_page() {
 			</div>
 
 			<p>
-				<button type="button" class="button" id="gn-add-section"><?php esc_html_e( 'Add section', 'gazettenews' ); ?></button>
+				<button type="button" class="button button-primary" id="gn-add-section"><?php esc_html_e( 'Add section', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="ad" data-position="full"><?php esc_html_e( 'Add full-width ad', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="ad" data-position="right"><?php esc_html_e( 'Add right ad', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="posts" data-position="left"><?php esc_html_e( 'Add left posts', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="posts" data-position="right"><?php esc_html_e( 'Add right posts', 'gazettenews' ); ?></button>
 			</p>
 
 			<?php submit_button( __( 'Save homepage', 'gazettenews' ) ); ?>
+			<?php submit_button( __( 'Reset to India-news layout', 'gazettenews' ), 'secondary', 'gazettenews_reset_home', false ); ?>
 		</form>
 
 		<template id="gn-section-tpl">
@@ -124,14 +136,17 @@ function gazettenews_admin_homepage_page() {
 			gazettenews_admin_section_row(
 				'__i__',
 				array(
-					'id'      => '',
-					'type'    => 'posts',
-					'enabled' => true,
-					'title'   => '',
-					'cat'     => 0,
-					'layout'  => 'grid',
-					'count'   => 4,
-					'html'    => '',
+					'id'       => '',
+					'type'     => 'posts',
+					'enabled'  => true,
+					'title'    => '',
+					'cat'      => 0,
+					'layout'   => 'grid',
+					'count'    => 4,
+					'position' => 'left',
+					'html'     => '',
+					'image'    => '',
+					'link'     => '',
 				),
 				$types,
 				$layouts,
@@ -144,7 +159,17 @@ function gazettenews_admin_homepage_page() {
 }
 
 function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) {
-	$i = (string) $i;
+	$i         = (string) $i;
+	$positions = gazettenews_section_positions();
+	if ( empty( $section['position'] ) ) {
+		$section['position'] = 'left';
+	}
+	if ( ! isset( $section['image'] ) ) {
+		$section['image'] = '';
+	}
+	if ( ! isset( $section['link'] ) ) {
+		$section['link'] = '';
+	}
 	?>
 	<div class="gn-section-row" data-type="<?php echo esc_attr( $section['type'] ); ?>">
 		<input type="hidden" name="sections[<?php echo esc_attr( $i ); ?>][id]" value="<?php echo esc_attr( $section['id'] ? $section['id'] : uniqid( 'sec', false ) ); ?>">
@@ -164,12 +189,20 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 						<?php endforeach; ?>
 					</select>
 				</label>
+				<label>
+					<?php esc_html_e( 'Place', 'gazettenews' ); ?>
+					<select class="gn-position" name="sections[<?php echo esc_attr( $i ); ?>][position]">
+						<?php foreach ( $positions as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $section['position'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
 				<button type="button" class="button-link gn-remove"><?php esc_html_e( 'Remove', 'gazettenews' ); ?></button>
 			</div>
 			<div class="gn-fields">
 				<label class="gn-f gn-f-title">
-					<?php esc_html_e( 'Title', 'gazettenews' ); ?>
-					<input type="text" name="sections[<?php echo esc_attr( $i ); ?>][title]" value="<?php echo esc_attr( $section['title'] ); ?>">
+					<?php esc_html_e( 'Section name', 'gazettenews' ); ?>
+					<input type="text" name="sections[<?php echo esc_attr( $i ); ?>][title]" value="<?php echo esc_attr( $section['title'] ); ?>" placeholder="<?php esc_attr_e( 'e.g. Latest News', 'gazettenews' ); ?>">
 				</label>
 				<label class="gn-f gn-f-cat">
 					<?php esc_html_e( 'Category', 'gazettenews' ); ?>
@@ -188,8 +221,16 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 					</select>
 				</label>
 				<label class="gn-f gn-f-count">
-					<?php esc_html_e( 'Count', 'gazettenews' ); ?>
+					<?php esc_html_e( 'Post count', 'gazettenews' ); ?>
 					<input type="number" min="1" max="12" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
+				</label>
+				<label class="gn-f gn-f-image">
+					<?php esc_html_e( 'Ad image URL', 'gazettenews' ); ?>
+					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][image]" value="<?php echo esc_attr( $section['image'] ); ?>">
+				</label>
+				<label class="gn-f gn-f-link">
+					<?php esc_html_e( 'Ad link URL', 'gazettenews' ); ?>
+					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][link]" value="<?php echo esc_attr( $section['link'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-html">
 					<?php esc_html_e( 'HTML / ad code', 'gazettenews' ); ?>
