@@ -149,7 +149,7 @@ function gazettenews_render_ad_unit( $section, $in_column = false ) {
 	$image = isset( $section['image'] ) ? $section['image'] : '';
 	$link  = isset( $section['link'] ) ? $section['link'] : '';
 	$html  = isset( $section['html'] ) ? $section['html'] : '';
-	$class = $in_column ? 'home-ad-slot ad-in-col' : 'gn-container home-ad-slot';
+	$class = $in_column ? 'home-ad-slot ad-in-col' : 'home-ad-slot';
 	echo '<div class="' . esc_attr( $class ) . '">';
 	if ( $section['title'] ) {
 		echo '<div class="ad-kicker">' . esc_html( $section['title'] ) . '</div>';

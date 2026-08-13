@@ -60,7 +60,7 @@ function gazettenews_default_home_sections() {
 			'title'    => '',
 			'cat'      => 0,
 			'layout'   => 'hero',
-			'count'    => 1,
+			'count'    => 5,
 			'position' => 'left',
 			'html'     => '',
 			'image'    => '',
@@ -299,7 +299,7 @@ function gazettenews_render_homepage() {
 	$left     = array();
 	$right    = array();
 
-	echo '<div class="magazine-wrap">';
+	echo '<div class="gn-container magazine-wrap">';
 	foreach ( $sections as $section ) {
 		if ( empty( $section['enabled'] ) ) {
 			continue;
@@ -326,7 +326,7 @@ function gazettenews_flush_home_columns( $left, $right, &$used ) {
 	if ( empty( $left ) && empty( $right ) ) {
 		return;
 	}
-	echo '<div class="gn-container home-columns">';
+	echo '<div class="home-columns">';
 	echo '<div class="home-col home-col-left">';
 	foreach ( $left as $section ) {
 		gazettenews_render_section( $section, $used, true );
@@ -413,13 +413,12 @@ function gazettenews_render_mosaic( $section, &$used, $in_column = false ) {
 	}
 
 	$used  = array_merge( $used, wp_list_pluck( $featured->posts, 'ID' ) );
-	$wrap  = $in_column ? '' : 'gn-container ';
 	?>
 	<section class="featured-mosaic">
 		<?php if ( $section['title'] ) : ?>
-			<div class="<?php echo esc_attr( $wrap ); ?>"><?php gazettenews_module_header( $section['title'], absint( $section['cat'] ) ); ?></div>
+			<?php gazettenews_module_header( $section['title'], absint( $section['cat'] ) ); ?>
 		<?php endif; ?>
-		<div class="<?php echo esc_attr( $wrap ); ?>mosaic-grid mosaic-count-<?php echo esc_attr( (string) min( 5, $featured->post_count ) ); ?>">
+		<div class="mosaic-grid mosaic-count-<?php echo esc_attr( (string) min( 5, $featured->post_count ) ); ?>">
 			<?php
 			$i = 0;
 			foreach ( $featured->posts as $post ) {
@@ -490,11 +489,19 @@ function gazettenews_render_posts_module( $section, &$used ) {
 	gazettenews_module_header( $title, $cat_id, $hstyle );
 
 	if ( 'hero' === $layout ) {
+		echo '<div class="gn-slider gn-slider-hero" data-visible="1">';
+		echo '<button type="button" class="gn-slide-btn prev" aria-label="' . esc_attr__( 'Previous', 'gazettenews' ) . '">&lsaquo;</button>';
+		echo '<div class="gn-slider-viewport"><div class="gn-slider-track">';
 		while ( $mod->have_posts() ) {
 			$mod->the_post();
 			$used[] = get_the_ID();
+			echo '<div class="gn-slide">';
 			get_template_part( 'template-parts/content', 'overlay' );
+			echo '</div>';
 		}
+		echo '</div></div>';
+		echo '<button type="button" class="gn-slide-btn next" aria-label="' . esc_attr__( 'Next', 'gazettenews' ) . '">&rsaquo;</button>';
+		echo '</div>';
 	} elseif ( 'thumbs' === $layout ) {
 		echo '<div class="thumbs-module">';
 		while ( $mod->have_posts() ) {
@@ -533,7 +540,7 @@ function gazettenews_render_posts_module( $section, &$used ) {
 		echo '</div>';
 	} elseif ( 'slider' === $layout ) {
 		$pos     = isset( $section['position'] ) ? $section['position'] : 'full';
-		$visible = ( 'full' === $pos ) ? 4 : ( 'right' === $pos ? 1 : 2 );
+		$visible = ( 'full' === $pos ) ? 3 : ( 'right' === $pos ? 1 : 2 );
 		$visible = min( $visible, max( 1, $count ) );
 		echo '<div class="gn-slider" data-visible="' . esc_attr( (string) $visible ) . '">';
 		echo '<button type="button" class="gn-slide-btn prev" aria-label="' . esc_attr__( 'Previous', 'gazettenews' ) . '">&lsaquo;</button>';

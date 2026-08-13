@@ -73,11 +73,24 @@ function gazettenews_admin_homepage_save() {
 	}
 	update_option( 'gazettenews_home_mode', $mode );
 
-	if ( isset( $_POST['youtube_api_key'] ) ) {
-		$key = sanitize_text_field( wp_unslash( $_POST['youtube_api_key'] ) );
+	if ( isset( $_POST['container_width'] ) ) {
+		update_option( 'gazettenews_container_width', gazettenews_sanitize_container_width( wp_unslash( $_POST['container_width'] ) ) );
+	}
+
+	if ( ! empty( $_POST['clear_youtube_api_key'] ) ) {
+		gazettenews_save_youtube_api_key( '' );
+		add_settings_error( 'gazettenews_home', 'yt_cleared', __( 'YouTube API key removed.', 'gazettenews' ), 'updated' );
+	} elseif ( isset( $_POST['youtube_api_key'] ) ) {
+		$key = preg_replace( '/\s+/', '', sanitize_text_field( wp_unslash( $_POST['youtube_api_key'] ) ) );
 		if ( '' !== $key ) {
-			set_theme_mod( 'gazettenews_youtube_api_key', $key );
+			gazettenews_save_youtube_api_key( $key );
+			add_settings_error( 'gazettenews_home', 'yt_saved', __( 'YouTube API key saved.', 'gazettenews' ), 'updated' );
 		}
+	}
+
+	if ( isset( $_POST['gazettenews_save_settings'] ) ) {
+		add_settings_error( 'gazettenews_home', 'settings', __( 'Layout settings saved.', 'gazettenews' ), 'updated' );
+		return;
 	}
 
 	if ( isset( $_POST['remove_logo'] ) ) {
@@ -131,6 +144,49 @@ function gazettenews_admin_homepage_page() {
 			</p>
 		</div>
 
+		<form method="post" class="gn-settings-form" autocomplete="off">
+			<?php wp_nonce_field( 'gazettenews_save_home', 'gazettenews_home_nonce' ); ?>
+			<input type="hidden" name="home_mode" value="<?php echo esc_attr( $mode ); ?>">
+			<table class="form-table" role="presentation">
+				<tr>
+					<th><?php esc_html_e( 'YouTube API key', 'gazettenews' ); ?></th>
+					<td>
+						<?php
+						$yt_key = gazettenews_youtube_api_key();
+						?>
+						<input type="text" class="regular-text" name="youtube_api_key" value="" autocomplete="off" spellcheck="false" placeholder="<?php esc_attr_e( 'Paste key here, then Save API & width', 'gazettenews' ); ?>">
+						<p class="description">
+							<?php
+							if ( $yt_key ) {
+								echo esc_html(
+									sprintf(
+										/* translators: %s: masked API key */
+										__( 'Saved key: %s. Paste a new key to replace it.', 'gazettenews' ),
+										gazettenews_mask_api_key( $yt_key )
+									)
+								);
+							} else {
+								esc_html_e( 'No key saved yet. Paste your YouTube Data API v3 key and click Save API & width. Do not use the homepage Save button alone for this field.', 'gazettenews' );
+							}
+							?>
+						</p>
+						<label>
+							<input type="checkbox" name="clear_youtube_api_key" value="1">
+							<?php esc_html_e( 'Clear saved key', 'gazettenews' ); ?>
+						</label>
+					</td>
+				</tr>
+				<tr>
+					<th><?php esc_html_e( 'Container width (px)', 'gazettenews' ); ?></th>
+					<td>
+						<input type="number" name="container_width" min="720" max="1920" step="10" value="<?php echo esc_attr( (string) gazettenews_container_width() ); ?>">
+						<p class="description"><?php esc_html_e( 'Homepage modules, header, and footer sit inside this max width (720–1920). Default 1240.', 'gazettenews' ); ?></p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button( __( 'Save API & width', 'gazettenews' ), 'primary', 'gazettenews_save_settings' ); ?>
+		</form>
+
 		<form method="post">
 			<?php wp_nonce_field( 'gazettenews_save_home', 'gazettenews_home_nonce' ); ?>
 
@@ -169,17 +225,6 @@ function gazettenews_admin_homepage_page() {
 						</fieldset>
 						<p class="description">
 							<?php esc_html_e( 'Block editor mode needs Settings → Reading → A static page as the homepage. Insert Gazette News blocks from the block inserter.', 'gazettenews' ); ?>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th><?php esc_html_e( 'YouTube API key', 'gazettenews' ); ?></th>
-					<td>
-						<input type="password" class="regular-text" name="youtube_api_key" value="" autocomplete="off" placeholder="<?php echo gazettenews_youtube_api_key() ? esc_attr__( 'Saved — paste a new key to replace', 'gazettenews' ) : ''; ?>">
-						<p class="description">
-							<?php echo gazettenews_youtube_api_key()
-								? esc_html__( 'A key is saved. Playlist titles and durations load from YouTube Data API v3.', 'gazettenews' )
-								: esc_html__( 'Paste your YouTube Data API v3 key. Then add a Video playlist section with video URLs or a playlist URL.', 'gazettenews' ); ?>
 						</p>
 					</td>
 				</tr>

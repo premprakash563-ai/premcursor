@@ -70,6 +70,23 @@ function gazettenews_customize_register( $wp_customize ) {
 		'type'    => 'text',
 	) );
 
+	$wp_customize->add_setting( 'gazettenews_container_width', array(
+		'type'              => 'option',
+		'default'           => 1240,
+		'sanitize_callback' => 'gazettenews_sanitize_container_width',
+	) );
+	$wp_customize->add_control( 'gazettenews_container_width', array(
+		'label'       => __( 'Site container width (px)', 'gazettenews' ),
+		'description' => __( 'Max width for header, homepage modules, and footer. 720–1920.', 'gazettenews' ),
+		'section'     => 'gazettenews_branding',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min'  => 720,
+			'max'  => 1920,
+			'step' => 10,
+		),
+	) );
+
 	$wp_customize->add_section( 'gazettenews_header', array(
 		'title' => __( 'Header & Ticker', 'gazettenews' ),
 		'panel' => 'gazettenews_panel',
@@ -86,14 +103,15 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_youtube_api_key', array(
+		'type'              => 'option',
 		'default'           => '',
-		'sanitize_callback' => 'sanitize_text_field',
+		'sanitize_callback' => 'gazettenews_sanitize_youtube_api_key',
 	) );
 	$wp_customize->add_control( 'gazettenews_youtube_api_key', array(
 		'label'       => __( 'YouTube Data API key', 'gazettenews' ),
-		'description' => __( 'Used for video playlist titles and durations. Restrict this key to YouTube Data API v3 and your domain.', 'gazettenews' ),
+		'description' => __( 'Leave blank to keep the saved key. Saving other Customizer settings will not erase it. Restrict this key to YouTube Data API v3 and your domain.', 'gazettenews' ),
 		'section'     => 'gazettenews_header',
-		'type'        => 'password',
+		'type'        => 'text',
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_breaking_label', array(

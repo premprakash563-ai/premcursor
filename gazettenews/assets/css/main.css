@@ -607,6 +607,7 @@ button, input, textarea { font-family: inherit; }
 
 .module-shop-link { display: none; }
 .front-page-content { margin-bottom: 28px; }
+.magazine-wrap { padding: 20px 0 40px; }
 
 .home-columns {
   display: grid;
@@ -683,13 +684,13 @@ button, input, textarea { font-family: inherit; }
 .round-meta .loc { color: var(--gn-menu); font-weight: 700; }
 
 .gn-slider { position: relative; }
-.gn-slider-viewport { overflow: hidden; }
-.gn-slider-track { display: flex; transition: transform .45s ease; }
+.gn-slider-viewport { overflow: hidden; width: 100%; }
+.gn-slider-track { display: flex; transition: transform .45s ease; will-change: transform; }
 .gn-slide { padding: 0 8px; box-sizing: border-box; }
 .gn-slide-btn {
   position: absolute;
   top: 38%;
-  z-index: 2;
+  z-index: 3;
   width: 36px;
   height: 36px;
   border: 0;
@@ -698,9 +699,18 @@ button, input, textarea { font-family: inherit; }
   font-size: 22px;
   cursor: pointer;
   border-radius: 50%;
+  line-height: 1;
 }
-.gn-slide-btn.prev { left: -8px; }
-.gn-slide-btn.next { right: -8px; }
+.gn-slide-btn.prev { left: 8px; }
+.gn-slide-btn.next { right: 8px; }
+.gn-slider-hero .gn-slide { padding: 0; }
+.gn-slider-hero .card-overlay { margin-bottom: 0; }
+.gn-slider-hero .overlay-link,
+.gn-slider-hero .overlay-link img,
+.gn-slider-hero .card-overlay .thumb-fallback {
+  min-height: 360px;
+  height: 420px;
+}
 
 .triple-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
 .triple-title {
