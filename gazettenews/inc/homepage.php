@@ -622,11 +622,15 @@ function gazettenews_youtube_items( $raw, $max = 50, $channel = '' ) {
 	$items     = array();
 	$playlists = array();
 	$channels  = array();
-	$max       = min( 12, max( 1, absint( $max ) ) );
+	$max       = min( 8, max( 1, absint( $max ) ) );
 	$feed_key  = 'gn_yt_feed_' . md5( (string) $raw . '|' . $max . '|' . (string) $channel . '|' . absint( get_option( 'gazettenews_yt_cache_v', 1 ) ) );
 	$cached    = get_transient( $feed_key );
 	if ( is_array( $cached ) ) {
 		return $cached;
+	}
+	$allow = is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) || ! empty( $GLOBALS['gazettenews_yt_fetch'] );
+	if ( ! $allow ) {
+		return array();
 	}
 	$lines     = preg_split( '/\r\n|\r|\n/', (string) $raw );
 	foreach ( $lines as $line ) {
@@ -723,7 +727,7 @@ function gazettenews_youtube_items( $raw, $max = 50, $channel = '' ) {
 }
 
 function gazettenews_render_video_playlist( $section ) {
-	$max   = min( 12, isset( $section['count'] ) ? absint( $section['count'] ) : 8 );
+	$max   = min( 8, isset( $section['count'] ) ? absint( $section['count'] ) : 8 );
 	$link  = isset( $section['link'] ) ? $section['link'] : '';
 	$items = gazettenews_youtube_items( isset( $section['html'] ) ? $section['html'] : '', $max, $link );
 	if ( empty( $items ) ) {
@@ -768,10 +772,9 @@ function gazettenews_render_facebook( $section ) {
 	if ( ! $url ) {
 		return;
 	}
-	$src = 'https://www.facebook.com/plugins/page.php?href=' . rawurlencode( $url ) . '&tabs=timeline&width=340&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true';
 	$style = isset( $section['headstyle'] ) ? $section['headstyle'] : 'bar';
 	echo '<section class="module module-facebook">';
 	gazettenews_module_header( $section['title'] ? $section['title'] : __( 'Follow us', 'gazettenews' ), 0, $style );
-	echo '<div class="fb-embed"><iframe src="' . esc_url( $src ) . '" width="340" height="500" style="border:none;overflow:hidden" scrolling="no" loading="lazy" frameborder="0" allow="encrypted-media" title="Facebook"></iframe></div>';
+	echo '<div class="fb-embed"><a class="fb-follow-card" href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open Facebook page', 'gazettenews' ) . '</a></div>';
 	echo '</section>';
 }

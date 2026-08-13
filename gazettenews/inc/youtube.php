@@ -87,6 +87,11 @@ function gazettenews_youtube_request( $endpoint, $args ) {
 		return $cached;
 	}
 
+	$allow = is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) || ! empty( $GLOBALS['gazettenews_yt_fetch'] );
+	if ( ! $allow ) {
+		return array();
+	}
+
 	$response = wp_remote_get(
 		$url,
 		array(
@@ -120,7 +125,7 @@ function gazettenews_youtube_request( $endpoint, $args ) {
 
 function gazettenews_youtube_playlist_ids( $playlist_id, $max = 50 ) {
 	$ids  = array();
-	$max  = min( 100, max( 1, absint( $max ) ) );
+	$max  = min( 8, max( 1, absint( $max ) ) );
 	$page = '';
 	while ( count( $ids ) < $max ) {
 		$args = array(
@@ -266,7 +271,7 @@ function gazettenews_youtube_probe() {
 			'error' => $err ? $err : __( 'Channel not found. Use a public channel URL such as https://www.youtube.com/@YourChannel', 'gazettenews' ),
 		);
 	}
-	$ids = gazettenews_youtube_playlist_ids( $info['uploads'], 100 );
+	$ids = gazettenews_youtube_playlist_ids( $info['uploads'], 8 );
 	return array(
 		'ok'    => true,
 		'count' => count( $ids ),
@@ -282,7 +287,7 @@ function gazettenews_youtube_hydrate( $items ) {
 			$ids[] = $item['id'];
 		}
 	}
-	$ids = array_slice( array_unique( $ids ), 0, 100 );
+	$ids = array_slice( array_unique( $ids ), 0, 8 );
 	if ( empty( $ids ) || ! gazettenews_youtube_api_key() ) {
 		return $items;
 	}

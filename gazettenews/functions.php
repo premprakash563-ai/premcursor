@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GAZETTENEWS_VERSION', '1.1.9' );
+define( 'GAZETTENEWS_VERSION', '1.2.0' );
 define( 'GAZETTENEWS_DIR', get_template_directory() );
 define( 'GAZETTENEWS_URI', get_template_directory_uri() );
 
@@ -162,12 +162,15 @@ function gazettenews_scripts() {
 		$ver_js = (string) filemtime( $js );
 	}
 
-	wp_enqueue_style(
-		'gazettenews-fonts',
-		gazettenews_google_fonts_url(),
-		array(),
-		null
-	);
+	$font_url = gazettenews_google_fonts_url();
+	if ( $font_url ) {
+		wp_enqueue_style(
+			'gazettenews-fonts',
+			$font_url,
+			array(),
+			null
+		);
+	}
 
 	wp_enqueue_style(
 		'gazettenews-style',
@@ -350,4 +353,3 @@ function gazettenews_upgrade_layout() {
 	update_option( 'gazettenews_sections_ver', 5 );
 }
 add_action( 'after_switch_theme', 'gazettenews_upgrade_layout' );
-add_action( 'admin_init', 'gazettenews_upgrade_layout' );

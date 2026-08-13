@@ -132,19 +132,16 @@ function gazettenews_used_font_keys() {
 
 function gazettenews_google_fonts_url() {
 	$map      = gazettenews_font_google_map();
-	$families = array(
-		'Noto+Sans+Devanagari:wght@400;600;700;800',
-		'Inter:wght@400;500;600;700;800',
-		'Source+Serif+4:opsz,wght@8..60,600;8..60,700',
-	);
-	$have = array_flip( $families );
+	$families = array();
 	foreach ( gazettenews_used_font_keys() as $key ) {
-		if ( isset( $map[ $key ] ) && ! isset( $have[ $map[ $key ] ] ) ) {
-			$families[]        = $map[ $key ];
-			$have[ $map[ $key ] ] = true;
+		if ( isset( $map[ $key ] ) ) {
+			$families[ $map[ $key ] ] = $map[ $key ];
 		}
 	}
-	return 'https://fonts.googleapis.com/css2?family=' . implode( '&family=', $families ) . '&display=swap';
+	if ( empty( $families ) ) {
+		return '';
+	}
+	return 'https://fonts.googleapis.com/css2?family=' . implode( '&family=', array_values( $families ) ) . '&display=swap';
 }
 
 function gazettenews_font_css_vars() {
