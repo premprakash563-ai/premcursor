@@ -77,6 +77,10 @@ function gazettenews_admin_homepage_save() {
 		update_option( 'gazettenews_container_width', gazettenews_sanitize_container_width( wp_unslash( $_POST['container_width'] ) ) );
 	}
 
+	if ( isset( $_POST['youtube_channel'] ) ) {
+		update_option( 'gazettenews_youtube_channel', gazettenews_sanitize_youtube_channel( wp_unslash( $_POST['youtube_channel'] ) ) );
+	}
+
 	if ( ! empty( $_POST['clear_youtube_api_key'] ) ) {
 		gazettenews_save_youtube_api_key( '' );
 		add_settings_error( 'gazettenews_home', 'yt_cleared', __( 'YouTube API key removed.', 'gazettenews' ), 'updated' );
@@ -89,6 +93,23 @@ function gazettenews_admin_homepage_save() {
 	}
 
 	if ( isset( $_POST['gazettenews_save_settings'] ) ) {
+		gazettenews_youtube_bust_cache();
+		$probe = gazettenews_youtube_probe();
+		if ( $probe['ok'] ) {
+			add_settings_error(
+				'gazettenews_home',
+				'yt_videos',
+				sprintf(
+					/* translators: 1: video count, 2: channel title */
+					__( 'YouTube connected: %1$d public videos loaded from “%2$s”. They show automatically in the Videos section.', 'gazettenews' ),
+					absint( $probe['count'] ),
+					$probe['title']
+				),
+				'updated'
+			);
+		} elseif ( ! empty( $probe['error'] ) ) {
+			add_settings_error( 'gazettenews_home', 'yt_err', $probe['error'], 'error' );
+		}
 		add_settings_error( 'gazettenews_home', 'settings', __( 'Layout settings saved.', 'gazettenews' ), 'updated' );
 		return;
 	}
@@ -174,6 +195,15 @@ function gazettenews_admin_homepage_page() {
 							<input type="checkbox" name="clear_youtube_api_key" value="1">
 							<?php esc_html_e( 'Clear saved key', 'gazettenews' ); ?>
 						</label>
+					</td>
+				</tr>
+				<tr>
+					<th><?php esc_html_e( 'YouTube channel', 'gazettenews' ); ?></th>
+					<td>
+						<input type="text" class="regular-text" name="youtube_channel" value="<?php echo esc_attr( gazettenews_youtube_channel() ); ?>" placeholder="https://www.youtube.com/@YourChannel">
+						<p class="description">
+							<?php esc_html_e( 'API key alone cannot list “my account”. Paste the public channel URL or @handle. After Save API & width, all public uploads load automatically in the Videos module (up to the Post count, max 100). Leave the video section HTML empty.', 'gazettenews' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -362,8 +392,8 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 					</select>
 				</label>
 				<label class="gn-f gn-f-count">
-					<?php esc_html_e( 'Post count', 'gazettenews' ); ?>
-					<input type="number" min="1" max="16" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
+					<?php esc_html_e( 'Post / video count', 'gazettenews' ); ?>
+					<input type="number" min="1" max="100" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-extra">
 					<?php esc_html_e( 'Extra category IDs (for 3 columns)', 'gazettenews' ); ?>
@@ -374,12 +404,12 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][image]" value="<?php echo esc_attr( $section['image'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-link">
-					<?php esc_html_e( 'Ad / Facebook page URL', 'gazettenews' ); ?>
-					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][link]" value="<?php echo esc_attr( $section['link'] ); ?>">
+					<?php esc_html_e( 'Ad / Facebook / YouTube channel URL', 'gazettenews' ); ?>
+					<input type="text" name="sections[<?php echo esc_attr( $i ); ?>][link]" value="<?php echo esc_attr( $section['link'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-html">
-					<?php esc_html_e( 'HTML / YouTube lines (url | title) / Facebook uses Link', 'gazettenews' ); ?>
-					<textarea name="sections[<?php echo esc_attr( $i ); ?>][html]" rows="3" placeholder="https://youtu.be/xxxxxxxxxxx | Video title"><?php echo esc_textarea( $section['html'] ); ?></textarea>
+					<?php esc_html_e( 'HTML / extra YouTube URLs (optional). Leave empty to auto-load the channel.', 'gazettenews' ); ?>
+					<textarea name="sections[<?php echo esc_attr( $i ); ?>][html]" rows="3" placeholder="<?php esc_attr_e( 'Leave empty for auto channel videos, or paste extra URLs', 'gazettenews' ); ?>"><?php echo esc_textarea( $section['html'] ); ?></textarea>
 				</label>
 			</div>
 		</div>

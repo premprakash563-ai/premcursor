@@ -179,7 +179,7 @@ function gazettenews_default_home_sections() {
 			'title'     => __( 'Videos', 'gazettenews' ),
 			'cat'       => 0,
 			'layout'    => '',
-			'count'     => 5,
+			'count'     => 50,
 			'position'  => 'left',
 			'headstyle' => 'bar',
 			'html'      => '',
@@ -266,12 +266,12 @@ function gazettenews_sanitize_section( $row ) {
 		'title'    => isset( $row['title'] ) ? sanitize_text_field( $row['title'] ) : '',
 		'cat'      => isset( $row['cat'] ) ? absint( $row['cat'] ) : 0,
 		'layout'   => $layout,
-		'count'     => isset( $row['count'] ) ? min( 16, max( 1, absint( $row['count'] ) ) ) : 4,
+		'count'     => isset( $row['count'] ) ? min( 100, max( 1, absint( $row['count'] ) ) ) : 4,
 		'position'  => $position,
 		'headstyle' => $head,
 		'html'      => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
 		'image'     => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
-		'link'      => isset( $row['link'] ) ? esc_url_raw( $row['link'] ) : '',
+		'link'      => isset( $row['link'] ) ? sanitize_text_field( $row['link'] ) : '',
 		'extra'     => isset( $row['extra'] ) ? sanitize_text_field( $row['extra'] ) : '',
 	);
 }
@@ -612,13 +612,12 @@ function gazettenews_render_three_columns( $section, &$used ) {
 	echo '</div>';
 }
 
-function gazettenews_youtube_items( $raw ) {
-	$items = array();
-	if ( ! $raw ) {
-		return $items;
-	}
+function gazettenews_youtube_items( $raw, $max = 50, $channel = '' ) {
+	$items     = array();
 	$playlists = array();
-	$lines     = preg_split( '/\r\n|\r|\n/', $raw );
+	$channels  = array();
+	$max       = min( 100, max( 1, absint( $max ) ) );
+	$lines     = preg_split( '/\r\n|\r|\n/', (string) $raw );
 	foreach ( $lines as $line ) {
 		$line = trim( wp_strip_all_tags( $line ) );
 		if ( ! $line ) {
@@ -629,6 +628,10 @@ function gazettenews_youtube_items( $raw ) {
 			$parts = array_map( 'trim', explode( '|', $line, 2 ) );
 			$line  = $parts[0];
 			$title = isset( $parts[1] ) ? $parts[1] : '';
+		}
+		if ( gazettenews_youtube_looks_like_channel( $line ) && ! preg_match( '/[?&]list=|[?&]v=|youtu\.be\/|\/embed\/|\/shorts\//', $line ) ) {
+			$channels[] = $line;
+			continue;
 		}
 		if ( preg_match( '/[?&]list=([A-Za-z0-9_-]+)/', $line, $pm ) ) {
 			$playlists[] = $pm[1];
@@ -653,8 +656,12 @@ function gazettenews_youtube_items( $raw ) {
 		}
 	}
 
+	if ( $channel && gazettenews_youtube_looks_like_channel( $channel ) ) {
+		array_unshift( $channels, $channel );
+	}
+
 	foreach ( $playlists as $pid ) {
-		foreach ( gazettenews_youtube_playlist_ids( $pid, 15 ) as $vid ) {
+		foreach ( gazettenews_youtube_playlist_ids( $pid, $max ) as $vid ) {
 			$items[] = array(
 				'id'       => $vid,
 				'title'    => '',
@@ -664,11 +671,48 @@ function gazettenews_youtube_items( $raw ) {
 		}
 	}
 
-	return gazettenews_youtube_hydrate( $items );
+	if ( empty( $items ) ) {
+		if ( empty( $channels ) ) {
+			$fallback = gazettenews_youtube_channel();
+			if ( $fallback ) {
+				$channels[] = $fallback;
+			}
+		}
+		foreach ( $channels as $ch ) {
+			foreach ( gazettenews_youtube_channel_video_ids( $ch, $max ) as $vid ) {
+				$items[] = array(
+					'id'       => $vid,
+					'title'    => '',
+					'duration' => '',
+					'thumb'    => '',
+				);
+			}
+			if ( $items ) {
+				break;
+			}
+		}
+	}
+
+	$seen = array();
+	$uniq = array();
+	foreach ( $items as $item ) {
+		if ( empty( $item['id'] ) || isset( $seen[ $item['id'] ] ) ) {
+			continue;
+		}
+		$seen[ $item['id'] ] = true;
+		$uniq[]              = $item;
+		if ( count( $uniq ) >= $max ) {
+			break;
+		}
+	}
+
+	return gazettenews_youtube_hydrate( $uniq );
 }
 
 function gazettenews_render_video_playlist( $section ) {
-	$items = gazettenews_youtube_items( $section['html'] );
+	$max   = isset( $section['count'] ) ? absint( $section['count'] ) : 50;
+	$link  = isset( $section['link'] ) ? $section['link'] : '';
+	$items = gazettenews_youtube_items( isset( $section['html'] ) ? $section['html'] : '', $max, $link );
 	if ( empty( $items ) ) {
 		return;
 	}

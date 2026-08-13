@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GAZETTENEWS_VERSION', '1.1.1' );
+define( 'GAZETTENEWS_VERSION', '1.1.2' );
 define( 'GAZETTENEWS_DIR', get_template_directory() );
 define( 'GAZETTENEWS_URI', get_template_directory_uri() );
 
@@ -224,7 +224,7 @@ function gazettenews_primary_fallback() {
 
 function gazettenews_upgrade_layout() {
 	$ver = absint( get_option( 'gazettenews_sections_ver', 1 ) );
-	if ( $ver >= 4 ) {
+	if ( $ver >= 5 ) {
 		return;
 	}
 	if ( $ver < 3 ) {
@@ -270,7 +270,19 @@ function gazettenews_upgrade_layout() {
 			update_option( 'gazettenews_home_sections', $saved );
 		}
 	}
-	update_option( 'gazettenews_sections_ver', 4 );
+	if ( $ver < 5 ) {
+		$saved = get_option( 'gazettenews_home_sections', array() );
+		if ( is_array( $saved ) ) {
+			foreach ( $saved as &$row ) {
+				if ( isset( $row['type'] ) && 'video' === $row['type'] && absint( $row['count'] ) < 20 ) {
+					$row['count'] = 50;
+				}
+			}
+			unset( $row );
+			update_option( 'gazettenews_home_sections', $saved );
+		}
+	}
+	update_option( 'gazettenews_sections_ver', 5 );
 }
 add_action( 'after_switch_theme', 'gazettenews_upgrade_layout' );
 add_action( 'admin_init', 'gazettenews_upgrade_layout' );

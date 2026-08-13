@@ -64,6 +64,22 @@ function gazettenews_youtube_duration( $iso ) {
 	return sprintf( '%02d:%02d', $i, $s );
 }
 
+function gazettenews_youtube_channel() {
+	$channel = trim( (string) get_option( 'gazettenews_youtube_channel', '' ) );
+	if ( $channel ) {
+		return $channel;
+	}
+	return trim( (string) get_theme_mod( 'gazettenews_social_youtube', '' ) );
+}
+
+function gazettenews_sanitize_youtube_channel( $value ) {
+	return sanitize_text_field( (string) $value );
+}
+
+function gazettenews_youtube_bust_cache() {
+	update_option( 'gazettenews_yt_cache_v', time(), false );
+}
+
 function gazettenews_youtube_request( $endpoint, $args ) {
 	$key = gazettenews_youtube_api_key();
 	if ( ! $key ) {
@@ -71,45 +87,191 @@ function gazettenews_youtube_request( $endpoint, $args ) {
 	}
 	$args['key'] = $key;
 	$url         = add_query_arg( $args, 'https://www.googleapis.com/youtube/v3/' . $endpoint );
-	$cache_key   = 'gn_yt_' . md5( $url );
+	$ver         = absint( get_option( 'gazettenews_yt_cache_v', 1 ) );
+	$cache_key   = 'gn_yt_' . $ver . '_' . md5( $url );
 	$cached      = get_transient( $cache_key );
 	if ( is_array( $cached ) ) {
 		return $cached;
 	}
 
-	$response = wp_remote_get( $url, array( 'timeout' => 12 ) );
+	$response = wp_remote_get( $url, array( 'timeout' => 15 ) );
 	if ( is_wp_error( $response ) ) {
+		update_option( 'gazettenews_youtube_last_error', $response->get_error_message(), false );
 		return array();
 	}
 	$code = wp_remote_retrieve_response_code( $response );
 	$body = json_decode( wp_remote_retrieve_body( $response ), true );
 	if ( 200 !== $code || ! is_array( $body ) ) {
+		$msg = '';
+		if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+			$msg = (string) $body['error']['message'];
+		} elseif ( $code ) {
+			$msg = sprintf( 'YouTube API HTTP %d', absint( $code ) );
+		}
+		update_option( 'gazettenews_youtube_last_error', $msg, false );
 		return array();
 	}
 
+	update_option( 'gazettenews_youtube_last_error', '', false );
 	set_transient( $cache_key, $body, 6 * HOUR_IN_SECONDS );
 	return $body;
 }
 
-function gazettenews_youtube_playlist_ids( $playlist_id, $max = 15 ) {
-	$body = gazettenews_youtube_request(
-		'playlistItems',
-		array(
+function gazettenews_youtube_playlist_ids( $playlist_id, $max = 50 ) {
+	$ids  = array();
+	$max  = min( 100, max( 1, absint( $max ) ) );
+	$page = '';
+	while ( count( $ids ) < $max ) {
+		$args = array(
 			'part'       => 'contentDetails',
-			'maxResults' => min( 50, max( 1, absint( $max ) ) ),
+			'maxResults' => min( 50, $max - count( $ids ) ),
 			'playlistId' => $playlist_id,
-		)
-	);
-	$ids = array();
-	if ( empty( $body['items'] ) || ! is_array( $body['items'] ) ) {
-		return $ids;
+		);
+		if ( $page ) {
+			$args['pageToken'] = $page;
+		}
+		$body = gazettenews_youtube_request( 'playlistItems', $args );
+		if ( empty( $body['items'] ) || ! is_array( $body['items'] ) ) {
+			break;
+		}
+		foreach ( $body['items'] as $item ) {
+			if ( ! empty( $item['contentDetails']['videoId'] ) ) {
+				$ids[] = $item['contentDetails']['videoId'];
+			}
+		}
+		if ( empty( $body['nextPageToken'] ) ) {
+			break;
+		}
+		$page = $body['nextPageToken'];
 	}
-	foreach ( $body['items'] as $item ) {
-		if ( ! empty( $item['contentDetails']['videoId'] ) ) {
-			$ids[] = $item['contentDetails']['videoId'];
+	return array_slice( array_unique( $ids ), 0, $max );
+}
+
+function gazettenews_youtube_looks_like_channel( $raw ) {
+	$raw = trim( (string) $raw );
+	if ( '' === $raw ) {
+		return false;
+	}
+	if ( preg_match( '/(?:youtube\.com\/(channel\/|@|c\/|user\/)|^[UCu]C[A-Za-z0-9_-]{20,}$|^@[A-Za-z0-9._-]+$)/', $raw ) ) {
+		return true;
+	}
+	return false;
+}
+
+function gazettenews_youtube_resolve_channel( $raw ) {
+	$raw = trim( (string) $raw );
+	if ( '' === $raw || ! gazettenews_youtube_api_key() ) {
+		return array();
+	}
+
+	$args = array( 'part' => 'id,snippet,contentDetails' );
+	if ( preg_match( '/channel\/(UC[A-Za-z0-9_-]+)/', $raw, $m ) || preg_match( '/^(UC[A-Za-z0-9_-]{20,})$/', $raw, $m ) ) {
+		$args['id'] = $m[1];
+	} elseif ( preg_match( '/youtube\.com\/@([A-Za-z0-9._-]+)/', $raw, $m ) || preg_match( '/^@([A-Za-z0-9._-]+)$/', $raw, $m ) ) {
+		$args['forHandle'] = $m[1];
+	} elseif ( preg_match( '/youtube\.com\/user\/([A-Za-z0-9._-]+)/', $raw, $m ) ) {
+		$args['forUsername'] = $m[1];
+	} elseif ( preg_match( '/youtube\.com\/c\/([A-Za-z0-9._-]+)/', $raw, $m ) ) {
+		$search = gazettenews_youtube_request(
+			'search',
+			array(
+				'part'       => 'snippet',
+				'type'       => 'channel',
+				'q'          => $m[1],
+				'maxResults' => 1,
+			)
+		);
+		if ( ! empty( $search['items'][0]['snippet']['channelId'] ) ) {
+			$args['id'] = $search['items'][0]['snippet']['channelId'];
+		} elseif ( ! empty( $search['items'][0]['id']['channelId'] ) ) {
+			$args['id'] = $search['items'][0]['id']['channelId'];
+		} else {
+			return array();
+		}
+	} else {
+		$args['forHandle'] = ltrim( $raw, '@' );
+	}
+
+	$body = gazettenews_youtube_request( 'channels', $args );
+	if ( empty( $body['items'][0] ) && ! empty( $args['forHandle'] ) ) {
+		$search = gazettenews_youtube_request(
+			'search',
+			array(
+				'part'       => 'snippet',
+				'type'       => 'channel',
+				'q'          => '@' . $args['forHandle'],
+				'maxResults' => 1,
+			)
+		);
+		$cid = '';
+		if ( ! empty( $search['items'][0]['id']['channelId'] ) ) {
+			$cid = $search['items'][0]['id']['channelId'];
+		}
+		if ( $cid ) {
+			$body = gazettenews_youtube_request(
+				'channels',
+				array(
+					'part' => 'id,snippet,contentDetails',
+					'id'   => $cid,
+				)
+			);
 		}
 	}
-	return $ids;
+
+	if ( empty( $body['items'][0] ) ) {
+		return array();
+	}
+	$item = $body['items'][0];
+	return array(
+		'id'      => isset( $item['id'] ) ? $item['id'] : '',
+		'title'   => isset( $item['snippet']['title'] ) ? $item['snippet']['title'] : '',
+		'uploads' => isset( $item['contentDetails']['relatedPlaylists']['uploads'] ) ? $item['contentDetails']['relatedPlaylists']['uploads'] : '',
+	);
+}
+
+function gazettenews_youtube_channel_video_ids( $channel_raw, $max = 50 ) {
+	$info = gazettenews_youtube_resolve_channel( $channel_raw );
+	if ( empty( $info['uploads'] ) ) {
+		return array();
+	}
+	return gazettenews_youtube_playlist_ids( $info['uploads'], $max );
+}
+
+function gazettenews_youtube_probe() {
+	if ( ! gazettenews_youtube_api_key() ) {
+		return array(
+			'ok'    => false,
+			'count' => 0,
+			'title' => '',
+			'error' => __( 'Save a YouTube Data API v3 key first.', 'gazettenews' ),
+		);
+	}
+	$channel = gazettenews_youtube_channel();
+	if ( ! $channel ) {
+		return array(
+			'ok'    => false,
+			'count' => 0,
+			'title' => '',
+			'error' => __( 'Paste your channel URL or @handle so videos can load automatically.', 'gazettenews' ),
+		);
+	}
+	$info = gazettenews_youtube_resolve_channel( $channel );
+	if ( empty( $info['uploads'] ) ) {
+		$err = trim( (string) get_option( 'gazettenews_youtube_last_error', '' ) );
+		return array(
+			'ok'    => false,
+			'count' => 0,
+			'title' => '',
+			'error' => $err ? $err : __( 'Channel not found. Use a public channel URL such as https://www.youtube.com/@YourChannel', 'gazettenews' ),
+		);
+	}
+	$ids = gazettenews_youtube_playlist_ids( $info['uploads'], 100 );
+	return array(
+		'ok'    => true,
+		'count' => count( $ids ),
+		'title' => $info['title'],
+		'error' => '',
+	);
 }
 
 function gazettenews_youtube_hydrate( $items ) {
@@ -119,20 +281,24 @@ function gazettenews_youtube_hydrate( $items ) {
 			$ids[] = $item['id'];
 		}
 	}
-	$ids = array_slice( array_unique( $ids ), 0, 50 );
+	$ids = array_slice( array_unique( $ids ), 0, 100 );
 	if ( empty( $ids ) || ! gazettenews_youtube_api_key() ) {
 		return $items;
 	}
 
-	$body = gazettenews_youtube_request(
-		'videos',
-		array(
-			'part' => 'snippet,contentDetails',
-			'id'   => implode( ',', $ids ),
-		)
-	);
-	$map = array();
-	if ( ! empty( $body['items'] ) && is_array( $body['items'] ) ) {
+	$map    = array();
+	$chunks = array_chunk( $ids, 50 );
+	foreach ( $chunks as $chunk ) {
+		$body = gazettenews_youtube_request(
+			'videos',
+			array(
+				'part' => 'snippet,contentDetails',
+				'id'   => implode( ',', $chunk ),
+			)
+		);
+		if ( empty( $body['items'] ) || ! is_array( $body['items'] ) ) {
+			continue;
+		}
 		foreach ( $body['items'] as $vid ) {
 			$id = isset( $vid['id'] ) ? $vid['id'] : '';
 			if ( ! $id ) {

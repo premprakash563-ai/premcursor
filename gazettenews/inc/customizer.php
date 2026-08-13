@@ -109,7 +109,19 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 	$wp_customize->add_control( 'gazettenews_youtube_api_key', array(
 		'label'       => __( 'YouTube Data API key', 'gazettenews' ),
-		'description' => __( 'Leave blank to keep the saved key. Saving other Customizer settings will not erase it. Restrict this key to YouTube Data API v3 and your domain.', 'gazettenews' ),
+		'description' => __( 'Leave blank to keep the saved key. Also add your channel URL below so videos load automatically.', 'gazettenews' ),
+		'section'     => 'gazettenews_header',
+		'type'        => 'text',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_youtube_channel', array(
+		'type'              => 'option',
+		'default'           => '',
+		'sanitize_callback' => 'gazettenews_sanitize_youtube_channel',
+	) );
+	$wp_customize->add_control( 'gazettenews_youtube_channel', array(
+		'label'       => __( 'YouTube channel URL or @handle', 'gazettenews' ),
+		'description' => __( 'Public channel only. Example: https://www.youtube.com/@YourChannel — videos appear in the homepage Videos section without pasting each URL.', 'gazettenews' ),
 		'section'     => 'gazettenews_header',
 		'type'        => 'text',
 	) );
