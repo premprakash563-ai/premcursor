@@ -79,8 +79,8 @@ function gazettenews_cart_fragment( $fragments ) {
 }
 add_filter( 'woocommerce_add_to_cart_fragments', 'gazettenews_cart_fragment' );
 
-function gazettenews_home_products( $limit = 4 ) {
-	if ( ! gazettenews_is_woocommerce_active() || ! get_theme_mod( 'gazettenews_show_shop', true ) ) {
+function gazettenews_home_products( $limit = 4, $title = '' ) {
+	if ( ! gazettenews_is_woocommerce_active() ) {
 		return;
 	}
 
@@ -97,8 +97,11 @@ function gazettenews_home_products( $limit = 4 ) {
 	}
 
 	$shop = wc_get_page_permalink( 'shop' );
+	if ( ! $title ) {
+		$title = __( 'Shop', 'gazettenews' );
+	}
 	echo '<section class="module module-shop">';
-	gazettenews_module_header( __( 'Shop', 'gazettenews' ) );
+	gazettenews_module_header( $title );
 	if ( $shop ) {
 		echo '<p class="module-shop-link"><a href="' . esc_url( $shop ) . '">' . esc_html__( 'Visit store', 'gazettenews' ) . '</a></p>';
 	}

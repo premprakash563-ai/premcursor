@@ -17,6 +17,11 @@ require_once GAZETTENEWS_DIR . '/inc/template-tags.php';
 require_once GAZETTENEWS_DIR . '/inc/customizer.php';
 require_once GAZETTENEWS_DIR . '/inc/widgets.php';
 require_once GAZETTENEWS_DIR . '/inc/woocommerce.php';
+require_once GAZETTENEWS_DIR . '/inc/homepage.php';
+require_once GAZETTENEWS_DIR . '/inc/blocks.php';
+if ( is_admin() ) {
+	require_once GAZETTENEWS_DIR . '/inc/admin-homepage.php';
+}
 
 /**
  * Theme setup.

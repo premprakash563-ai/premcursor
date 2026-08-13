@@ -552,6 +552,7 @@ button, input, textarea { font-family: inherit; }
 .footer-menu { display: flex; list-style: none; gap: 16px; }
 
 .module-shop-link { display: none; }
+.front-page-content { margin-bottom: 28px; }
 
 @media (max-width: 1024px) {
   .layout-with-sidebar,

@@ -75,8 +75,9 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 
 	$wp_customize->add_section( 'gazettenews_home', array(
-		'title' => __( 'Magazine Homepage', 'gazettenews' ),
-		'panel' => 'gazettenews_panel',
+		'title'       => __( 'Magazine Homepage', 'gazettenews' ),
+		'description' => __( 'For full control (add, drag, hide modules) use Appearance → Homepage Sections. These Customizer fields are used only as defaults before you save that screen.', 'gazettenews' ),
+		'panel'       => 'gazettenews_panel',
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_featured_count', array(

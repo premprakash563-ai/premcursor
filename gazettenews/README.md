@@ -12,6 +12,22 @@ This is **not** the commercial tagDiv Newspaper theme. It is a custom, GPL-licen
 4. **Settings → Reading**: you can keep “Your latest posts” as the homepage. The theme builds a magazine layout automatically.
 5. Or create a page, assign template **Magazine Homepage**, and set it as the front page.
 
+## Homepage sections (tagDiv alternative)
+
+**tagDiv Composer is not included and is not compatible.** It is a paid Newspaper-theme plugin.
+
+Manage the homepage like Newspaper modules:
+
+1. **Appearance → Homepage Sections**
+2. Choose mode:
+   - **Section manager** — add / drag / enable / category / layout (recommended)
+   - **Block editor** — build the Front Page in Gutenberg (or Elementor if you use that plugin)
+   - **Both** — page content, then these modules
+3. Add modules: Featured mosaic, Posts (split / grid / list), Shop, Ad, Custom HTML
+4. Save
+
+In the block editor, insert **Gazette: Featured mosaic**, **Gazette: Posts module**, and **Gazette: Shop**.
+
 ## Customize
 
 **Appearance → Customize → Gazette News**
@@ -19,9 +35,7 @@ This is **not** the commercial tagDiv Newspaper theme. It is a custom, GPL-licen
 - Accent color (default `#4db2ec`, Newspaper-style cyan)
 - Header tagline
 - Breaking news label and ticker count
-- Featured mosaic size (sticky posts first)
-- Four homepage category modules
-- Show/hide WooCommerce products on the homepage
+- Customizer module defaults (used until Homepage Sections is saved)
 - Social URLs
 - Footer copyright
 
