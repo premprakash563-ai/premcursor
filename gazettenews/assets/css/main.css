@@ -149,7 +149,7 @@ button, input, textarea { font-family: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.16em;
 }
-.custom-logo-link img { max-height: 72px; width: auto; }
+.custom-logo-link img { max-height: 90px; width: auto; height: auto; }
 .header-ad { margin-left: auto; min-width: 280px; max-width: 728px; }
 .header-ad .widget { margin: 0; }
 .header-ad .widget-title { display: none; }

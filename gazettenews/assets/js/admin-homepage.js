@@ -61,5 +61,27 @@
     $('input[name="gazettenews_reset_home"]').on('click', function () {
       return window.confirm('Reset homepage sections to the default left/right news layout?');
     });
+
+    var frame;
+    $('#gn-upload-logo').on('click', function (e) {
+      e.preventDefault();
+      if (frame) {
+        frame.open();
+        return;
+      }
+      frame = wp.media({
+        title: 'Select logo',
+        button: { text: 'Use this logo' },
+        multiple: false,
+        library: { type: 'image' }
+      });
+      frame.on('select', function () {
+        var att = frame.state().get('selection').first().toJSON();
+        $('#custom_logo_id').val(att.id);
+        var src = (att.sizes && att.sizes.medium) ? att.sizes.medium.url : att.url;
+        $('#gn-logo-preview').html('<img src="' + src + '" alt="">');
+      });
+      frame.open();
+    });
   });
 })(jQuery);

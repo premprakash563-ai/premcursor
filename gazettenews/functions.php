@@ -35,10 +35,12 @@ function gazettenews_setup() {
 	add_theme_support( 'post-formats', array( 'video', 'gallery', 'audio', 'quote' ) );
 	add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script' ) );
 	add_theme_support( 'custom-logo', array(
-		'height'      => 90,
-		'width'       => 320,
+		'height'      => 120,
+		'width'       => 400,
 		'flex-height' => true,
 		'flex-width'  => true,
+		'header-text' => array( 'site-title', 'site-tagline' ),
+		'unlink-homepage-logo' => false,
 	) );
 	add_theme_support( 'custom-background', array( 'default-color' => 'ffffff' ) );
 	add_theme_support( 'align-wide' );

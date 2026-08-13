@@ -16,8 +16,9 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 
 	$wp_customize->add_section( 'gazettenews_branding', array(
-		'title' => __( 'Colors & Branding', 'gazettenews' ),
-		'panel' => 'gazettenews_panel',
+		'title'    => __( 'Logo, Colors & Branding', 'gazettenews' ),
+		'panel'    => 'gazettenews_panel',
+		'priority' => 1,
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_accent', array(
@@ -242,6 +243,28 @@ function gazettenews_customize_register( $wp_customize ) {
 	) );
 }
 add_action( 'customize_register', 'gazettenews_customize_register' );
+
+function gazettenews_customize_logo_control( $wp_customize ) {
+	if ( ! $wp_customize->get_section( 'gazettenews_branding' ) ) {
+		return;
+	}
+	if ( ! $wp_customize->get_setting( 'custom_logo' ) ) {
+		$wp_customize->add_setting( 'custom_logo', array(
+			'theme_supports'    => array( 'custom-logo' ),
+			'transport'         => 'refresh',
+			'sanitize_callback' => 'absint',
+		) );
+	}
+	$wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'gazettenews_header_logo', array(
+		'label'     => __( 'Header logo', 'gazettenews' ),
+		'description' => __( 'Upload PNG or JPG. Replaces the text logo.', 'gazettenews' ),
+		'section'   => 'gazettenews_branding',
+		'settings'  => 'custom_logo',
+		'mime_type' => 'image',
+		'priority'  => 1,
+	) ) );
+}
+add_action( 'customize_register', 'gazettenews_customize_logo_control', 20 );
 
 function gazettenews_social_links( $class = '' ) {
 	$out   = '';

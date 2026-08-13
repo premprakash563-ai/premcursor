@@ -70,6 +70,15 @@
 .gn-section-row[data-type="html"] .gn-f-html,
 .gn-section-row[data-type="video"] .gn-f-html,
 .gn-section-row[data-type="facebook"] .gn-f-link { display: flex; }
-.gn-section-row[data-type="ad"] .gn-f-title,
-.gn-section-row[data-type="video"] .gn-f-title,
-.gn-section-row[data-type="facebook"] .gn-f-title { display: flex; }
+.gn-logo-box { max-width: 480px; }
+.gn-logo-preview {
+  border: 1px dashed #c3c4c7;
+  background: #fff;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.gn-logo-preview img { max-height: 90px; width: auto; }

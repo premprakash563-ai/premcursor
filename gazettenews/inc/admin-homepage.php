@@ -45,6 +45,7 @@ function gazettenews_admin_assets( $hook ) {
 	if ( false === strpos( $hook, 'gazettenews-homepage' ) ) {
 		return;
 	}
+	wp_enqueue_media();
 	wp_enqueue_style( 'gazettenews-admin-home', GAZETTENEWS_URI . '/assets/css/admin-homepage.css', array(), GAZETTENEWS_VERSION );
 	wp_enqueue_script( 'jquery-ui-sortable' );
 	wp_enqueue_script( 'gazettenews-admin-home', GAZETTENEWS_URI . '/assets/js/admin-homepage.js', array( 'jquery', 'jquery-ui-sortable' ), GAZETTENEWS_VERSION, true );
@@ -76,6 +77,15 @@ function gazettenews_admin_homepage_save() {
 		$key = sanitize_text_field( wp_unslash( $_POST['youtube_api_key'] ) );
 		if ( '' !== $key ) {
 			set_theme_mod( 'gazettenews_youtube_api_key', $key );
+		}
+	}
+
+	if ( isset( $_POST['remove_logo'] ) ) {
+		remove_theme_mod( 'custom_logo' );
+	} elseif ( isset( $_POST['custom_logo_id'] ) ) {
+		$logo_id = absint( $_POST['custom_logo_id'] );
+		if ( $logo_id ) {
+			set_theme_mod( 'custom_logo', $logo_id );
 		}
 	}
 
@@ -125,6 +135,30 @@ function gazettenews_admin_homepage_page() {
 			<?php wp_nonce_field( 'gazettenews_save_home', 'gazettenews_home_nonce' ); ?>
 
 			<table class="form-table" role="presentation">
+				<tr>
+					<th><?php esc_html_e( 'Header logo', 'gazettenews' ); ?></th>
+					<td>
+						<?php
+						$logo_id  = absint( get_theme_mod( 'custom_logo' ) );
+						$logo_src = $logo_id ? wp_get_attachment_image_url( $logo_id, 'full' ) : '';
+						?>
+						<div class="gn-logo-box">
+							<div id="gn-logo-preview" class="gn-logo-preview">
+								<?php if ( $logo_src ) : ?>
+									<img src="<?php echo esc_url( $logo_src ); ?>" alt="">
+								<?php else : ?>
+									<span><?php esc_html_e( 'No logo yet', 'gazettenews' ); ?></span>
+								<?php endif; ?>
+							</div>
+							<input type="hidden" name="custom_logo_id" id="custom_logo_id" value="<?php echo esc_attr( (string) $logo_id ); ?>">
+							<p>
+								<button type="button" class="button button-primary" id="gn-upload-logo"><?php esc_html_e( 'Upload / select logo', 'gazettenews' ); ?></button>
+								<button type="submit" class="button" name="remove_logo" value="1"><?php esc_html_e( 'Remove logo', 'gazettenews' ); ?></button>
+							</p>
+							<p class="description"><?php esc_html_e( 'PNG or JPG. After upload click Save homepage. You can also set it under Appearance → Customize → Gazette News → Logo, Colors & Branding.', 'gazettenews' ); ?></p>
+						</div>
+					</td>
+				</tr>
 				<tr>
 					<th><?php esc_html_e( 'How to build the homepage', 'gazettenews' ); ?></th>
 					<td>
