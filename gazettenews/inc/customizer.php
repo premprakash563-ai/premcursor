@@ -146,6 +146,22 @@ function gazettenews_customize_register( $wp_customize ) {
 		'type'    => 'number',
 	) );
 
+	$wp_customize->add_setting( 'gazettenews_breaking_speed', array(
+		'default'           => 40,
+		'sanitize_callback' => 'gazettenews_sanitize_ticker_speed',
+	) );
+	$wp_customize->add_control( 'gazettenews_breaking_speed', array(
+		'label'       => __( 'Breaking news speed (seconds per loop)', 'gazettenews' ),
+		'description' => __( 'Lower = faster ticker. 8–120.', 'gazettenews' ),
+		'section'     => 'gazettenews_header',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min'  => 8,
+			'max'  => 120,
+			'step' => 1,
+		),
+	) );
+
 	$wp_customize->add_setting( 'gazettenews_header_ad_image', array(
 		'default'           => '',
 		'sanitize_callback' => 'esc_url_raw',
@@ -179,6 +195,22 @@ function gazettenews_customize_register( $wp_customize ) {
 		'title'       => __( 'Magazine Homepage', 'gazettenews' ),
 		'description' => __( 'For full control (add, drag, hide modules) use Appearance → Homepage Sections. These Customizer fields are used only as defaults before you save that screen.', 'gazettenews' ),
 		'panel'       => 'gazettenews_panel',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_slider_speed', array(
+		'default'           => 5,
+		'sanitize_callback' => 'gazettenews_sanitize_slider_speed',
+	) );
+	$wp_customize->add_control( 'gazettenews_slider_speed', array(
+		'label'       => __( 'Slider speed (seconds)', 'gazettenews' ),
+		'description' => __( 'How long each slide stays before looping. 2–20 seconds.', 'gazettenews' ),
+		'section'     => 'gazettenews_home',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min'  => 2,
+			'max'  => 20,
+			'step' => 1,
+		),
 	) );
 
 	$wp_customize->add_setting( 'gazettenews_featured_count', array(
@@ -247,10 +279,67 @@ function gazettenews_customize_register( $wp_customize ) {
 		) );
 	}
 
+	$wp_customize->add_setting( 'gazettenews_social_email', array(
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_email',
+	) );
+	$wp_customize->add_control( 'gazettenews_social_email', array(
+		'label'   => __( 'Email (Follow us)', 'gazettenews' ),
+		'section' => 'gazettenews_social',
+		'type'    => 'email',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_social_website', array(
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	) );
+	$wp_customize->add_control( 'gazettenews_social_website', array(
+		'label'   => __( 'Website URL', 'gazettenews' ),
+		'section' => 'gazettenews_social',
+		'type'    => 'url',
+	) );
+
 	$wp_customize->add_section( 'gazettenews_footer', array(
 		'title' => __( 'Footer', 'gazettenews' ),
 		'panel' => 'gazettenews_panel',
 	) );
+
+	$wp_customize->add_setting( 'gazettenews_footer_bg', array(
+		'default'           => '#111111',
+		'sanitize_callback' => 'sanitize_hex_color',
+	) );
+	$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'gazettenews_footer_bg', array(
+		'label'   => __( 'Footer background color', 'gazettenews' ),
+		'section' => 'gazettenews_footer',
+	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_footer_image', array(
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	) );
+	$wp_customize->add_control( new WP_Customize_Image_Control( $wp_customize, 'gazettenews_footer_image', array(
+		'label'       => __( 'Footer background image', 'gazettenews' ),
+		'description' => __( 'Optional. Color still shows as a dark overlay.', 'gazettenews' ),
+		'section'     => 'gazettenews_footer',
+	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_footer_bar', array(
+		'default'           => '#3498db',
+		'sanitize_callback' => 'sanitize_hex_color',
+	) );
+	$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'gazettenews_footer_bar', array(
+		'label'   => __( 'Footer widget title bar', 'gazettenews' ),
+		'section' => 'gazettenews_footer',
+	) ) );
+
+	$wp_customize->add_setting( 'gazettenews_footer_highlight', array(
+		'default'           => '#ffe14a',
+		'sanitize_callback' => 'sanitize_hex_color',
+	) );
+	$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'gazettenews_footer_highlight', array(
+		'label'   => __( 'Footer highlight (About / copyright)', 'gazettenews' ),
+		'section' => 'gazettenews_footer',
+	) ) );
 
 	$wp_customize->add_setting( 'gazettenews_copyright', array(
 		'default'           => '',
@@ -270,6 +359,27 @@ function gazettenews_customize_register( $wp_customize ) {
 		'label'   => __( 'Footer About us', 'gazettenews' ),
 		'section' => 'gazettenews_footer',
 		'type'    => 'textarea',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_contact_email', array(
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_email',
+	) );
+	$wp_customize->add_control( 'gazettenews_contact_email', array(
+		'label'   => __( 'Contact email (footer About)', 'gazettenews' ),
+		'section' => 'gazettenews_footer',
+		'type'    => 'email',
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_publisher_name', array(
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_text_field',
+	) );
+	$wp_customize->add_control( 'gazettenews_publisher_name', array(
+		'label'       => __( 'Default “Published By” name', 'gazettenews' ),
+		'description' => __( 'Used on single posts if the post has no publisher set.', 'gazettenews' ),
+		'section'     => 'gazettenews_footer',
+		'type'        => 'text',
 	) );
 }
 add_action( 'customize_register', 'gazettenews_customize_register' );
@@ -297,14 +407,27 @@ function gazettenews_customize_logo_control( $wp_customize ) {
 add_action( 'customize_register', 'gazettenews_customize_logo_control', 20 );
 
 function gazettenews_social_links( $class = '' ) {
-	$out   = '';
-	$wrap  = $class ? ' class="' . esc_attr( $class ) . '"' : '';
-	$items = array( 'facebook', 'twitter', 'instagram', 'youtube', 'linkedin', 'telegram', 'whatsapp' );
-	foreach ( $items as $network ) {
-		$url = get_theme_mod( "gazettenews_social_{$network}" );
-		if ( $url ) {
-			$out .= '<a class="soc-' . esc_attr( $network ) . '" href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( ucfirst( $network ) ) . '</a>';
+	$out  = '';
+	$wrap = $class ? ' class="' . esc_attr( $class ) . '"' : '';
+	$map  = array(
+		'facebook'  => get_theme_mod( 'gazettenews_social_facebook' ),
+		'twitter'   => get_theme_mod( 'gazettenews_social_twitter' ),
+		'instagram' => get_theme_mod( 'gazettenews_social_instagram' ),
+		'youtube'   => get_theme_mod( 'gazettenews_social_youtube' ),
+		'linkedin'  => get_theme_mod( 'gazettenews_social_linkedin' ),
+		'telegram'  => get_theme_mod( 'gazettenews_social_telegram' ),
+		'whatsapp'  => get_theme_mod( 'gazettenews_social_whatsapp' ),
+		'email'     => get_theme_mod( 'gazettenews_social_email' ),
+		'website'   => get_theme_mod( 'gazettenews_social_website' ),
+	);
+	foreach ( $map as $network => $url ) {
+		if ( ! $url ) {
+			continue;
 		}
+		$href = 'email' === $network ? 'mailto:' . antispambot( $url ) : $url;
+		$out .= '<a class="soc-' . esc_attr( $network ) . '" href="' . esc_url( $href ) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr( ucfirst( $network ) ) . '">';
+		$out .= gazettenews_svg_icon( $network );
+		$out .= '</a>';
 	}
 	if ( $class && $out ) {
 		return '<div' . $wrap . '>' . $out . '</div>';

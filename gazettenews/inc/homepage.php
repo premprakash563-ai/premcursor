@@ -489,7 +489,7 @@ function gazettenews_render_posts_module( $section, &$used ) {
 	gazettenews_module_header( $title, $cat_id, $hstyle );
 
 	if ( 'hero' === $layout ) {
-		echo '<div class="gn-slider gn-slider-hero" data-visible="1">';
+		echo '<div class="gn-slider gn-slider-hero" data-visible="1" data-loop="1" data-speed="' . esc_attr( (string) gazettenews_slider_speed_ms() ) . '">';
 		echo '<button type="button" class="gn-slide-btn prev" aria-label="' . esc_attr__( 'Previous', 'gazettenews' ) . '">&lsaquo;</button>';
 		echo '<div class="gn-slider-viewport"><div class="gn-slider-track">';
 		while ( $mod->have_posts() ) {
@@ -542,7 +542,7 @@ function gazettenews_render_posts_module( $section, &$used ) {
 		$pos     = isset( $section['position'] ) ? $section['position'] : 'full';
 		$visible = ( 'full' === $pos ) ? 3 : ( 'right' === $pos ? 1 : 2 );
 		$visible = min( $visible, max( 1, $count ) );
-		echo '<div class="gn-slider" data-visible="' . esc_attr( (string) $visible ) . '">';
+		echo '<div class="gn-slider" data-visible="' . esc_attr( (string) $visible ) . '" data-loop="1" data-speed="' . esc_attr( (string) gazettenews_slider_speed_ms() ) . '">';
 		echo '<button type="button" class="gn-slide-btn prev" aria-label="' . esc_attr__( 'Previous', 'gazettenews' ) . '">&lsaquo;</button>';
 		echo '<div class="gn-slider-viewport"><div class="gn-slider-track">';
 		while ( $mod->have_posts() ) {
