@@ -21,7 +21,7 @@ $loc  = $cats ? $cats[0]->name : '';
 			<?php if ( $loc ) : ?>
 				<span class="loc"><?php echo esc_html( $loc ); ?></span>
 			<?php endif; ?>
-			<?php gazettenews_posted_by( true ); ?>
+			<?php gazettenews_compact_meta(); ?>
 		</div>
 		<div class="entry-excerpt"><?php the_excerpt(); ?></div>
 	</div>

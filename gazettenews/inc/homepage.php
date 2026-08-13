@@ -272,6 +272,8 @@ function gazettenews_sanitize_section( $row ) {
 		'font'       => gazettenews_sanitize_font_key( isset( $row['font'] ) ? $row['font'] : '' ),
 		'title_size' => gazettenews_sanitize_font_size( isset( $row['title_size'] ) ? $row['title_size'] : 0, 0, 48 ),
 		'text_size'  => gazettenews_sanitize_font_size( isset( $row['text_size'] ) ? $row['text_size'] : 0, 0, 28 ),
+		'show_comments' => ! isset( $row['show_comments'] ) ? 1 : ( empty( $row['show_comments'] ) ? 0 : 1 ),
+		'show_views'    => ! isset( $row['show_views'] ) ? 1 : ( empty( $row['show_views'] ) ? 0 : 1 ),
 		'html'       => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
 		'image'     => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
 		'link'      => isset( $row['link'] ) ? sanitize_text_field( $row['link'] ) : '',
@@ -347,6 +349,7 @@ function gazettenews_flush_home_columns( $left, $right, &$used ) {
 }
 
 function gazettenews_render_section( $section, &$used, $in_column = false ) {
+	gazettenews_set_meta_context( $section );
 	echo '<div' . gazettenews_section_font_attr( $section ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	$type = $section['type'];
 	if ( 'mosaic' === $type ) {
@@ -368,6 +371,7 @@ function gazettenews_render_section( $section, &$used, $in_column = false ) {
 		gazettenews_render_posts_module( $section, $used );
 	}
 	echo '</div>';
+	gazettenews_set_meta_context();
 }
 
 function gazettenews_render_mosaic( $section, &$used, $in_column = false ) {
@@ -434,7 +438,16 @@ function gazettenews_render_mosaic( $section, &$used, $in_column = false ) {
 							}
 							?>
 							<h2><?php the_title(); ?></h2>
-							<span class="mosaic-meta"><?php echo esc_html( get_the_author() ); ?> · <?php echo esc_html( get_the_date() ); ?> · <?php echo esc_html( get_comments_number() ); ?></span>
+							<span class="mosaic-meta">
+								<?php echo esc_html( get_the_author() ); ?>
+								· <?php echo esc_html( get_the_date() ); ?>
+								<?php if ( gazettenews_show_meta( 'comments' ) ) : ?>
+									· <?php echo esc_html( number_format_i18n( get_comments_number() ) ); ?>
+								<?php endif; ?>
+								<?php if ( gazettenews_show_meta( 'views' ) ) : ?>
+									· <?php echo esc_html( number_format_i18n( gazettenews_get_views() ) ); ?>
+								<?php endif; ?>
+							</span>
 						</span>
 					</a>
 				</article>

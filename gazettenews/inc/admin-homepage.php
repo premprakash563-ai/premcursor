@@ -302,6 +302,8 @@ function gazettenews_admin_homepage_page() {
 					'font'      => '',
 					'title_size'=> 0,
 					'text_size' => 0,
+					'show_comments' => 1,
+					'show_views'    => 1,
 					'html'      => '',
 					'image'     => '',
 					'link'      => '',
@@ -344,6 +346,12 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 	}
 	if ( ! isset( $section['text_size'] ) ) {
 		$section['text_size'] = 0;
+	}
+	if ( ! isset( $section['show_comments'] ) ) {
+		$section['show_comments'] = 1;
+	}
+	if ( ! isset( $section['show_views'] ) ) {
+		$section['show_views'] = 1;
 	}
 	$fonts = gazettenews_font_choices();
 	?>
@@ -424,6 +432,19 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 					<?php esc_html_e( 'Text size px (0=default)', 'gazettenews' ); ?>
 					<input type="number" min="0" max="28" name="sections[<?php echo esc_attr( $i ); ?>][text_size]" value="<?php echo esc_attr( (string) $section['text_size'] ); ?>">
 				</label>
+				<div class="gn-f gn-f-meta">
+					<span><?php esc_html_e( 'On this section', 'gazettenews' ); ?></span>
+					<label class="gn-check">
+						<input type="hidden" name="sections[<?php echo esc_attr( $i ); ?>][show_comments]" value="0">
+						<input type="checkbox" name="sections[<?php echo esc_attr( $i ); ?>][show_comments]" value="1" <?php checked( ! empty( $section['show_comments'] ) ); ?>>
+						<?php esc_html_e( 'Show comments', 'gazettenews' ); ?>
+					</label>
+					<label class="gn-check">
+						<input type="hidden" name="sections[<?php echo esc_attr( $i ); ?>][show_views]" value="0">
+						<input type="checkbox" name="sections[<?php echo esc_attr( $i ); ?>][show_views]" value="1" <?php checked( ! empty( $section['show_views'] ) ); ?>>
+						<?php esc_html_e( 'Show views', 'gazettenews' ); ?>
+					</label>
+				</div>
 				<label class="gn-f gn-f-extra">
 					<?php esc_html_e( 'Extra category IDs (for 3 columns)', 'gazettenews' ); ?>
 					<input type="text" name="sections[<?php echo esc_attr( $i ); ?>][extra]" value="<?php echo esc_attr( $section['extra'] ); ?>" placeholder="12,34">

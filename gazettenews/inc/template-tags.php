@@ -48,10 +48,28 @@ function gazettenews_count_view() {
 }
 add_action( 'template_redirect', 'gazettenews_count_view' );
 
+function gazettenews_set_meta_context( $section = null ) {
+	$GLOBALS['gazettenews_meta'] = array(
+		'comments' => true,
+		'views'    => true,
+	);
+	if ( is_array( $section ) ) {
+		$GLOBALS['gazettenews_meta']['comments'] = ! isset( $section['show_comments'] ) || ! empty( $section['show_comments'] );
+		$GLOBALS['gazettenews_meta']['views']    = ! isset( $section['show_views'] ) || ! empty( $section['show_views'] );
+	}
+}
+
+function gazettenews_show_meta( $what ) {
+	if ( empty( $GLOBALS['gazettenews_meta'] ) || ! isset( $GLOBALS['gazettenews_meta'][ $what ] ) ) {
+		return true;
+	}
+	return ! empty( $GLOBALS['gazettenews_meta'][ $what ] );
+}
+
 function gazettenews_comments_count( $compact = false ) {
 	$n = get_comments_number();
 	if ( $compact ) {
-		echo '<span class="meta-comments">' . esc_html( number_format_i18n( $n ) ) . '</span>';
+		echo '<span class="meta-comments">' . gazettenews_svg_icon( 'comment' ) . ' ' . esc_html( number_format_i18n( $n ) ) . '</span>';
 		return;
 	}
 	echo '<span class="meta-comments"><a href="' . esc_url( get_comments_link() ) . '">' . esc_html( sprintf( _n( '%s comment', '%s comments', $n, 'gazettenews' ), number_format_i18n( $n ) ) ) . '</a></span>';
@@ -78,6 +96,9 @@ function gazettenews_svg_icon( $name ) {
 		'email'     => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 8 8-5H4l8 5zm0 2L4 10v8h16v-8l-8 5z"/></svg>',
 		'website'   => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm7.4 9h-3.2a15 15 0 0 0-1.3-5.2A8.1 8.1 0 0 1 19.4 11zM12 4c.7 0 2.2 2.1 2.8 6H9.2C9.8 6.1 11.3 4 12 4zM4.6 13h3.2a15 15 0 0 0 1.3 5.2A8.1 8.1 0 0 1 4.6 13zm3.2-2H4.6A8.1 8.1 0 0 1 9.1 5.8 15 15 0 0 0 7.8 11zM12 20c-.7 0-2.2-2.1-2.8-6h5.6c-.6 3.9-2.1 6-2.8 6zm2.9-1.8A15 15 0 0 0 16.2 13h3.2a8.1 8.1 0 0 1-4.5 5.2z"/></svg>',
 		'eye'       => '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 5c5.5 0 9.5 4.5 10.5 7-1 2.5-5 7-10.5 7S2.5 14.5 1.5 12C2.5 9.5 6.5 5 12 5zm0 3.5A3.5 3.5 0 1 0 15.5 12 3.5 3.5 0 0 0 12 8.5z"/></svg>',
+		'comment'   => '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 5v-5H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>',
+		'search'    => '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>',
+		'close'     => '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>',
 		'copy'      => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 7V4h12v12h-3V7H8zm-2 2h12v12H6V9z"/></svg>',
 	);
 	return isset( $icons[ $name ] ) ? $icons[ $name ] : '';
@@ -177,18 +198,40 @@ function gazettenews_save_byline_metabox( $post_id ) {
 }
 add_action( 'save_post_post', 'gazettenews_save_byline_metabox' );
 
-function gazettenews_entry_meta( $show_comments = true, $show_views = true ) {
+function gazettenews_entry_meta( $show_comments = null, $show_views = null ) {
+	if ( null === $show_comments ) {
+		$show_comments = gazettenews_show_meta( 'comments' );
+	}
+	if ( null === $show_views ) {
+		$show_views = gazettenews_show_meta( 'views' );
+	}
 	echo '<div class="entry-meta">';
 	gazettenews_posted_by();
-	echo '<span class="meta-sep">—</span>';
+	echo '<span class="meta-sep">·</span>';
 	gazettenews_posted_on();
 	if ( $show_comments ) {
-		echo '<span class="meta-sep">—</span>';
+		echo '<span class="meta-sep">·</span>';
 		gazettenews_comments_count();
 	}
 	if ( $show_views ) {
-		echo '<span class="meta-sep">—</span>';
+		echo '<span class="meta-sep">·</span>';
 		gazettenews_views_count();
+	}
+	echo '</div>';
+}
+
+function gazettenews_compact_meta() {
+	$comments = gazettenews_show_meta( 'comments' );
+	$views    = gazettenews_show_meta( 'views' );
+	echo '<div class="entry-meta">';
+	gazettenews_posted_by( true );
+	if ( $comments ) {
+		echo '<span class="meta-sep">·</span>';
+		gazettenews_comments_count( true );
+	}
+	if ( $views ) {
+		echo '<span class="meta-sep">·</span>';
+		gazettenews_views_count( true );
 	}
 	echo '</div>';
 }

@@ -120,6 +120,18 @@
 	<a class="gn-top" href="#page" aria-label="<?php esc_attr_e( 'Back to top', 'gazettenews' ); ?>">↑</a>
 </div><!-- #page -->
 
+<div id="gn-search-modal" class="gn-search-modal" hidden>
+	<button type="button" class="gn-search-backdrop" data-gn-search-close aria-label="<?php esc_attr_e( 'Close search', 'gazettenews' ); ?>"></button>
+	<div class="gn-search-panel" role="dialog" aria-modal="true" aria-labelledby="gn-search-title">
+		<button type="button" class="gn-search-close" data-gn-search-close>
+			<?php echo gazettenews_svg_icon( 'close' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<span class="screen-reader-text"><?php esc_html_e( 'Close', 'gazettenews' ); ?></span>
+		</button>
+		<p id="gn-search-title" class="gn-search-kicker"><?php esc_html_e( 'Search news', 'gazettenews' ); ?></p>
+		<?php get_search_form(); ?>
+	</div>
+</div>
+
 <?php wp_footer(); ?>
 </body>
 </html>

@@ -23,8 +23,12 @@
 			<span class="overlay-meta">
 				<?php echo esc_html( get_the_author() ); ?>
 				· <?php echo esc_html( get_the_date() ); ?>
-				· <?php echo esc_html( number_format_i18n( get_comments_number() ) ); ?>
-				· <?php echo esc_html( number_format_i18n( gazettenews_get_views() ) ); ?>
+				<?php if ( gazettenews_show_meta( 'comments' ) ) : ?>
+					· <?php echo esc_html( number_format_i18n( get_comments_number() ) ); ?>
+				<?php endif; ?>
+				<?php if ( gazettenews_show_meta( 'views' ) ) : ?>
+					· <?php echo esc_html( number_format_i18n( gazettenews_get_views() ) ); ?>
+				<?php endif; ?>
 			</span>
 		</span>
 	</a>

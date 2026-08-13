@@ -86,12 +86,10 @@
 					'fallback_cb'    => 'gazettenews_primary_fallback',
 				) );
 				?>
-				<button class="search-toggle" type="button" aria-expanded="false"><?php esc_html_e( 'Search', 'gazettenews' ); ?></button>
-			</div>
-			<div class="header-search">
-				<div class="gn-container">
-					<?php get_search_form(); ?>
-				</div>
+				<button class="search-toggle" type="button" aria-expanded="false" aria-controls="gn-search-modal">
+					<?php echo gazettenews_svg_icon( 'search' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<span class="screen-reader-text"><?php esc_html_e( 'Search', 'gazettenews' ); ?></span>
+				</button>
 			</div>
 		</nav>
 

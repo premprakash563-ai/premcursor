@@ -8,13 +8,7 @@
 <article <?php post_class( 'card-thumbs' ); ?>>
 	<div class="card-body">
 		<h3 class="entry-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-		<div class="entry-meta">
-			<?php gazettenews_posted_by( true ); ?>
-			<span class="meta-sep">·</span>
-			<?php gazettenews_comments_count( true ); ?>
-			<span class="meta-sep">·</span>
-			<?php gazettenews_views_count( true ); ?>
-		</div>
+		<?php gazettenews_compact_meta(); ?>
 	</div>
 	<a class="thumb" href="<?php the_permalink(); ?>">
 		<?php if ( has_post_thumbnail() ) : ?>
