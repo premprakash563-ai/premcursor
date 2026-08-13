@@ -1,0 +1,16 @@
+INSTALL (WordPress)
+
+1. Upload THIS zip via Appearance → Themes → Add New → Upload Theme.
+   The zip root must contain style.css (already arranged).
+
+2. Activate "Gazette News".
+
+3. Left admin menu: "Home Sections"
+   - Add section / Add slider / Add video / Add Facebook
+   - Or click "Reset to India-news layout"
+
+4. YouTube API key: Home Sections page (or Customizer).
+
+5. Facebook: set your page URL on the Facebook section, and in Customizer → Social Links.
+
+If the site looks unstyled, the previous zip was nested (gazettenews/gazettenews). Delete the old theme folder and upload this zip again.

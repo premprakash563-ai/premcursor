@@ -10,6 +10,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function gazettenews_admin_menu() {
+	add_menu_page(
+		__( 'Homepage Sections', 'gazettenews' ),
+		__( 'Home Sections', 'gazettenews' ),
+		'edit_theme_options',
+		'gazettenews-homepage',
+		'gazettenews_admin_homepage_page',
+		'dashicons-schedule',
+		58
+	);
 	add_theme_page(
 		__( 'Homepage Sections', 'gazettenews' ),
 		__( 'Homepage Sections', 'gazettenews' ),
@@ -20,8 +29,20 @@ function gazettenews_admin_menu() {
 }
 add_action( 'admin_menu', 'gazettenews_admin_menu' );
 
+function gazettenews_admin_bar( $wp_admin_bar ) {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		return;
+	}
+	$wp_admin_bar->add_node( array(
+		'id'    => 'gazettenews-home',
+		'title' => __( 'Home Sections', 'gazettenews' ),
+		'href'  => admin_url( 'admin.php?page=gazettenews-homepage' ),
+	) );
+}
+add_action( 'admin_bar_menu', 'gazettenews_admin_bar', 80 );
+
 function gazettenews_admin_assets( $hook ) {
-	if ( 'appearance_page_gazettenews-homepage' !== $hook ) {
+	if ( false === strpos( $hook, 'gazettenews-homepage' ) ) {
 		return;
 	}
 	wp_enqueue_style( 'gazettenews-admin-home', GAZETTENEWS_URI . '/assets/css/admin-homepage.css', array(), GAZETTENEWS_VERSION );
@@ -87,6 +108,10 @@ function gazettenews_admin_homepage_page() {
 	?>
 	<div class="wrap gn-home-admin">
 		<h1><?php esc_html_e( 'Homepage Sections', 'gazettenews' ); ?></h1>
+		<p>
+			<strong><?php esc_html_e( 'Add / slider / video / Facebook yahan se:', 'gazettenews' ); ?></strong>
+			<?php esc_html_e( 'Neeche Add section, Add slider, Add video playlist, Add Facebook feed buttons use karo. Layout dropdown se Slider choose karo. Save homepage dabana zaroori hai.', 'gazettenews' ); ?>
+		</p>
 		<?php settings_errors( 'gazettenews_home' ); ?>
 
 		<div class="notice notice-info">

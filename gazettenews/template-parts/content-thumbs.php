@@ -5,7 +5,7 @@
  * @package GazetteNews
  */
 ?>
-<article <?php post_class( 'card-thumbs' ); ?>>
+<article <?php post_class( 'card-thumbs' ); ?> style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e8e8e8;">
 	<div class="card-body">
 		<h3 class="entry-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
 		<div class="entry-meta">

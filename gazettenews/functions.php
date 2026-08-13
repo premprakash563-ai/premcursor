@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GAZETTENEWS_VERSION', '1.0.0' );
+define( 'GAZETTENEWS_VERSION', '1.1.0' );
 define( 'GAZETTENEWS_DIR', get_template_directory() );
 define( 'GAZETTENEWS_URI', get_template_directory_uri() );
 
@@ -21,9 +21,7 @@ require_once GAZETTENEWS_DIR . '/inc/ads.php';
 require_once GAZETTENEWS_DIR . '/inc/youtube.php';
 require_once GAZETTENEWS_DIR . '/inc/homepage.php';
 require_once GAZETTENEWS_DIR . '/inc/blocks.php';
-if ( is_admin() ) {
-	require_once GAZETTENEWS_DIR . '/inc/admin-homepage.php';
-}
+require_once GAZETTENEWS_DIR . '/inc/admin-homepage.php';
 
 /**
  * Theme setup.
@@ -107,6 +105,17 @@ add_action( 'widgets_init', 'gazettenews_widgets_init' );
  * Enqueue assets.
  */
 function gazettenews_scripts() {
+	$ver_css = GAZETTENEWS_VERSION;
+	$ver_js  = GAZETTENEWS_VERSION;
+	$css     = get_template_directory() . '/assets/css/main.css';
+	$js      = get_template_directory() . '/assets/js/main.js';
+	if ( file_exists( $css ) ) {
+		$ver_css = (string) filemtime( $css );
+	}
+	if ( file_exists( $js ) ) {
+		$ver_js = (string) filemtime( $js );
+	}
+
 	wp_enqueue_style(
 		'gazettenews-fonts',
 		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap',
@@ -118,14 +127,14 @@ function gazettenews_scripts() {
 		'gazettenews-style',
 		get_stylesheet_uri(),
 		array(),
-		GAZETTENEWS_VERSION
+		$ver_css
 	);
 
 	wp_enqueue_style(
 		'gazettenews-main',
-		GAZETTENEWS_URI . '/assets/css/main.css',
+		get_template_directory_uri() . '/assets/css/main.css',
 		array( 'gazettenews-style' ),
-		GAZETTENEWS_VERSION
+		$ver_css
 	);
 
 	$accent = sanitize_hex_color( get_theme_mod( 'gazettenews_accent', '#d61f26' ) );
@@ -136,14 +145,15 @@ function gazettenews_scripts() {
 	if ( ! $menu ) {
 		$menu = '#1b5e4b';
 	}
-	$css = ':root{--gn-accent:' . $accent . ';--gn-menu:' . $menu . ';}';
-	wp_add_inline_style( 'gazettenews-main', $css );
+	$css_vars = ':root{--gn-accent:' . $accent . ';--gn-menu:' . $menu . ';}';
+	wp_add_inline_style( 'gazettenews-main', $css_vars );
+	wp_add_inline_style( 'gazettenews-style', $css_vars );
 
 	wp_enqueue_script(
 		'gazettenews-main',
-		GAZETTENEWS_URI . '/assets/js/main.js',
+		get_template_directory_uri() . '/assets/js/main.js',
 		array(),
-		GAZETTENEWS_VERSION,
+		$ver_js,
 		true
 	);
 
@@ -194,3 +204,42 @@ function gazettenews_primary_fallback() {
 	) );
 	echo '</ul>';
 }
+
+function gazettenews_upgrade_layout() {
+	$ver = absint( get_option( 'gazettenews_sections_ver', 1 ) );
+	if ( $ver >= 3 ) {
+		return;
+	}
+	$saved = get_option( 'gazettenews_home_sections', null );
+	if ( ! is_array( $saved ) || count( $saved ) < 8 ) {
+		update_option( 'gazettenews_home_sections', gazettenews_default_home_sections() );
+	} else {
+		$types   = wp_list_pluck( $saved, 'type' );
+		$layouts = wp_list_pluck( $saved, 'layout' );
+		$extra   = array();
+		if ( ! in_array( 'slider', $layouts, true ) ) {
+			$extra[] = array(
+				'id' => 'slider-1', 'type' => 'posts', 'enabled' => true, 'title' => __( 'Trending', 'gazettenews' ),
+				'cat' => 0, 'layout' => 'slider', 'count' => 8, 'position' => 'full', 'headstyle' => 'bar', 'html' => '', 'image' => '', 'link' => '', 'extra' => '',
+			);
+		}
+		if ( ! in_array( 'video', $types, true ) ) {
+			$extra[] = array(
+				'id' => 'video-1', 'type' => 'video', 'enabled' => true, 'title' => __( 'Videos', 'gazettenews' ),
+				'cat' => 0, 'layout' => '', 'count' => 5, 'position' => 'left', 'headstyle' => 'bar', 'html' => '', 'image' => '', 'link' => '', 'extra' => '',
+			);
+		}
+		if ( ! in_array( 'facebook', $types, true ) ) {
+			$extra[] = array(
+				'id' => 'fb-1', 'type' => 'facebook', 'enabled' => true, 'title' => __( 'Follow us', 'gazettenews' ),
+				'cat' => 0, 'layout' => '', 'count' => 1, 'position' => 'right', 'headstyle' => 'bar', 'html' => '', 'image' => '', 'link' => '', 'extra' => '',
+			);
+		}
+		if ( $extra ) {
+			update_option( 'gazettenews_home_sections', array_merge( $saved, $extra ) );
+		}
+	}
+	update_option( 'gazettenews_sections_ver', 3 );
+}
+add_action( 'after_switch_theme', 'gazettenews_upgrade_layout' );
+add_action( 'admin_init', 'gazettenews_upgrade_layout' );

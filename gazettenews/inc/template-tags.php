@@ -103,12 +103,21 @@ function gazettenews_share_links( $context = 'default' ) {
 		'linkedin' => array( __( 'LinkedIn', 'gazettenews' ), 'https://www.linkedin.com/shareArticle?mini=true&url=' . $url . '&title=' . $title ),
 		'email'    => array( __( 'Email', 'gazettenews' ), 'mailto:?subject=' . $title . '&body=' . $url ),
 	);
-	echo '<div class="gn-share gn-share-' . esc_attr( $context ) . '">';
-	echo '<span>' . esc_html__( 'Share', 'gazettenews' ) . '</span>';
+	echo '<div class="gn-share gn-share-' . esc_attr( $context ) . '" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0;">';
+	echo '<span style="font-weight:800;text-transform:uppercase;font-size:12px;">' . esc_html__( 'Share', 'gazettenews' ) . '</span>';
+	$colors = array(
+		'facebook' => '#1877f2',
+		'twitter'  => '#111111',
+		'whatsapp' => '#25d366',
+		'telegram' => '#229ed9',
+		'linkedin' => '#0a66c2',
+		'email'    => '#555555',
+	);
 	foreach ( $links as $network => $item ) {
-		echo '<a class="share-' . esc_attr( $network ) . '" href="' . esc_url( $item[1] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $item[0] ) . '</a>';
+		$bg = isset( $colors[ $network ] ) ? $colors[ $network ] : '#444';
+		echo '<a class="share-' . esc_attr( $network ) . '" style="display:inline-block;background:' . esc_attr( $bg ) . ';color:#fff;padding:6px 10px;font-size:11px;font-weight:700;text-transform:uppercase;text-decoration:none;" href="' . esc_url( $item[1] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $item[0] ) . '</a>';
 	}
-	echo '<button type="button" class="share-copy" data-url="' . esc_attr( $plain ) . '">' . esc_html__( 'Copy link', 'gazettenews' ) . '</button>';
+	echo '<button type="button" class="share-copy" data-url="' . esc_attr( $plain ) . '" style="background:#555;color:#fff;border:0;padding:6px 10px;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;">' . esc_html__( 'Copy link', 'gazettenews' ) . '</button>';
 	echo '</div>';
 }
 
