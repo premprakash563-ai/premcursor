@@ -46,14 +46,21 @@ function gazettenews_count_view() {
 }
 add_action( 'template_redirect', 'gazettenews_count_view' );
 
-function gazettenews_comments_count() {
+function gazettenews_comments_count( $compact = false ) {
 	$n = get_comments_number();
+	if ( $compact ) {
+		echo '<span class="meta-comments">' . esc_html( number_format_i18n( $n ) ) . '</span>';
+		return;
+	}
 	echo '<span class="meta-comments"><a href="' . esc_url( get_comments_link() ) . '">' . esc_html( sprintf( _n( '%s comment', '%s comments', $n, 'gazettenews' ), number_format_i18n( $n ) ) ) . '</a></span>';
 }
 
-function gazettenews_views_count() {
+function gazettenews_views_count( $compact = false ) {
 	$n = gazettenews_get_views();
-	echo '<span class="meta-views">' . gazettenews_svg_icon( 'eye' ) . ' ' . esc_html( sprintf( _n( '%s view', '%s views', $n, 'gazettenews' ), number_format_i18n( $n ) ) ) . '</span>';
+	$label = $compact
+		? number_format_i18n( $n )
+		: sprintf( _n( '%s view', '%s views', $n, 'gazettenews' ), number_format_i18n( $n ) );
+	echo '<span class="meta-views">' . gazettenews_svg_icon( 'eye' ) . ' ' . esc_html( $label ) . '</span>';
 }
 
 function gazettenews_svg_icon( $name ) {
