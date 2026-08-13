@@ -38,4 +38,46 @@
       }
     });
   });
+
+  document.querySelectorAll('.gn-slider').forEach(function (root) {
+    var track = root.querySelector('.gn-slider-track');
+    var slides = root.querySelectorAll('.gn-slide');
+    if (!track || !slides.length) return;
+    var visible = parseInt(root.getAttribute('data-visible'), 10) || 4;
+    if (window.innerWidth < 760) visible = 1;
+    else if (window.innerWidth < 1024) visible = Math.min(visible, 2);
+    var index = 0;
+    var max = Math.max(0, slides.length - visible);
+    function go(n) {
+      index = n;
+      if (index < 0) index = max;
+      if (index > max) index = 0;
+      track.style.transform = 'translateX(' + (-(100 / visible) * index) + '%)';
+    }
+    var prev = root.querySelector('.prev');
+    var next = root.querySelector('.next');
+    if (prev) prev.addEventListener('click', function () { go(index - 1); });
+    if (next) next.addEventListener('click', function () { go(index + 1); });
+    setInterval(function () { go(index + 1); }, 5000);
+    slides.forEach(function (slide) {
+      slide.style.flex = '0 0 ' + (100 / visible) + '%';
+    });
+  });
+
+  document.querySelectorAll('.video-playlist').forEach(function (box) {
+    var frame = box.querySelector('.gn-yt-player');
+    var now = box.querySelector('.now-title');
+    box.querySelectorAll('.video-item').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-id');
+        var title = btn.getAttribute('data-title') || '';
+        if (frame && id) {
+          frame.src = 'https://www.youtube.com/embed/' + id + '?autoplay=1';
+        }
+        if (now) now.textContent = title;
+        box.querySelectorAll('.video-item').forEach(function (el) { el.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+      });
+    });
+  });
 })();

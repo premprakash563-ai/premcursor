@@ -28,6 +28,9 @@
       if (overrides.position) {
         $row.find('.gn-position').val(overrides.position);
       }
+      if (overrides.layout) {
+        $row.find('select[name*="[layout]"]').val(overrides.layout);
+      }
     }
     $('#gn-sections').append($row);
     bind($row);
@@ -50,7 +53,8 @@
     $('.gn-add-preset').on('click', function () {
       addRow({
         type: $(this).data('type'),
-        position: $(this).data('position')
+        position: $(this).data('position'),
+        layout: $(this).data('layout')
       });
     });
 

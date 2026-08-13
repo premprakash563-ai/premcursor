@@ -122,14 +122,15 @@ function gazettenews_query( $args = array() ) {
 	return new WP_Query( wp_parse_args( $args, $defaults ) );
 }
 
-function gazettenews_module_header( $title, $cat_id = 0 ) {
+function gazettenews_module_header( $title, $cat_id = 0, $style = 'default' ) {
 	if ( '' === (string) $title ) {
 		return;
 	}
-	$link = $cat_id ? get_category_link( $cat_id ) : '';
-	echo '<div class="module-header">';
+	$link  = $cat_id ? get_category_link( $cat_id ) : '';
+	$style = $style ? $style : 'default';
+	echo '<div class="module-header is-' . esc_attr( $style ) . '">';
 	echo '<h3 class="module-title"><span>' . esc_html( $title ) . '</span></h3>';
-	if ( $link ) {
+	if ( $link && 'bar' !== $style ) {
 		echo '<a class="module-more" href="' . esc_url( $link ) . '">' . esc_html__( 'More', 'gazettenews' ) . '</a>';
 	}
 	echo '</div>';

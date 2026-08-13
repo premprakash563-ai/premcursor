@@ -21,8 +21,12 @@ Manage the homepage like Newspaper modules:
 1. **Appearance → Homepage Sections**
 2. Set **Section name**, **Place** (Left / Right / Full width), category, layout, **post count**
 3. Add ads in any column (image URL + link, or HTML)
-4. Drag to reorder. Buttons: Add full-width ad, Add right ad, Add left/right posts
-5. **Reset to India-news layout** restores big featured left + list right + ad slots
+4. **Layout → Slider / carousel** on any posts module (or click **Add slider**)
+5. Also: 4-column cards, 3 category columns, YouTube playlist, Facebook feed
+6. Title style: default / full banner / underline
+7. Drag to reorder. **Reset to India-news layout** restores featured-left + list-right
+
+YouTube playlist: paste one `https://youtu.be/ID | Title` per line. Facebook: paste page URL in Ad link field.
 
 Block editor also has **Gazette: Featured mosaic**, **Gazette: Posts module**, and **Gazette: Shop**.
 

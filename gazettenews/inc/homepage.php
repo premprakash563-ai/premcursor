@@ -11,22 +11,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function gazettenews_section_types() {
 	return array(
-		'hero'   => __( 'Big featured story', 'gazettenews' ),
-		'posts'  => __( 'Posts module', 'gazettenews' ),
-		'mosaic' => __( 'Featured mosaic', 'gazettenews' ),
-		'ad'     => __( 'Advertisement', 'gazettenews' ),
-		'shop'   => __( 'WooCommerce products', 'gazettenews' ),
-		'html'   => __( 'Custom HTML', 'gazettenews' ),
+		'hero'     => __( 'Big featured story', 'gazettenews' ),
+		'posts'    => __( 'Posts module', 'gazettenews' ),
+		'mosaic'   => __( 'Featured mosaic', 'gazettenews' ),
+		'ad'       => __( 'Advertisement', 'gazettenews' ),
+		'video'    => __( 'YouTube video playlist', 'gazettenews' ),
+		'facebook' => __( 'Facebook page feed', 'gazettenews' ),
+		'shop'     => __( 'WooCommerce products', 'gazettenews' ),
+		'html'     => __( 'Custom HTML', 'gazettenews' ),
 	);
 }
 
 function gazettenews_section_layouts() {
 	return array(
-		'hero'   => __( 'Big overlay image', 'gazettenews' ),
-		'thumbs' => __( 'Headline + thumb (right)', 'gazettenews' ),
-		'split'  => __( 'Split (big + list)', 'gazettenews' ),
-		'grid'   => __( 'Grid', 'gazettenews' ),
-		'list'   => __( 'List', 'gazettenews' ),
+		'slider'    => __( 'Slider / carousel', 'gazettenews' ),
+		'grid4'     => __( '4-column cards', 'gazettenews' ),
+		'columns3'  => __( '3 category columns', 'gazettenews' ),
+		'hero'      => __( 'Big overlay image', 'gazettenews' ),
+		'thumbs'    => __( 'Headline + thumb (right)', 'gazettenews' ),
+		'split'     => __( 'Split (big + list)', 'gazettenews' ),
+		'grid'      => __( 'Grid', 'gazettenews' ),
+		'list'      => __( 'List', 'gazettenews' ),
+	);
+}
+
+function gazettenews_header_styles() {
+	return array(
+		'default' => __( 'Default title bar', 'gazettenews' ),
+		'bar'     => __( 'Full red/green banner (centered)', 'gazettenews' ),
+		'line'    => __( 'Underline title', 'gazettenews' ),
 	);
 }
 
@@ -142,7 +155,7 @@ function gazettenews_get_home_mode() {
 function gazettenews_get_home_sections() {
 	$saved = get_option( 'gazettenews_home_sections', null );
 	if ( ! is_array( $saved ) ) {
-		return gazettenews_default_home_sections();
+		$saved = gazettenews_default_home_sections();
 	}
 	$clean = array();
 	foreach ( $saved as $row ) {
@@ -166,6 +179,11 @@ function gazettenews_sanitize_section( $row ) {
 	if ( 'hero' === $type ) {
 		$layout = 'hero';
 	}
+	$heads = array_keys( gazettenews_header_styles() );
+	$head  = isset( $row['headstyle'] ) ? sanitize_key( $row['headstyle'] ) : 'default';
+	if ( ! in_array( $head, $heads, true ) ) {
+		$head = 'default';
+	}
 	$position = isset( $row['position'] ) ? sanitize_key( $row['position'] ) : '';
 	if ( ! in_array( $position, $places, true ) ) {
 		$position = ( 'mosaic' === $type || 'ad' === $type ) ? 'full' : 'left';
@@ -177,11 +195,13 @@ function gazettenews_sanitize_section( $row ) {
 		'title'    => isset( $row['title'] ) ? sanitize_text_field( $row['title'] ) : '',
 		'cat'      => isset( $row['cat'] ) ? absint( $row['cat'] ) : 0,
 		'layout'   => $layout,
-		'count'    => isset( $row['count'] ) ? min( 12, max( 1, absint( $row['count'] ) ) ) : 4,
-		'position' => $position,
-		'html'     => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
-		'image'    => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
-		'link'     => isset( $row['link'] ) ? esc_url_raw( $row['link'] ) : '',
+		'count'     => isset( $row['count'] ) ? min( 16, max( 1, absint( $row['count'] ) ) ) : 4,
+		'position'  => $position,
+		'headstyle' => $head,
+		'html'      => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
+		'image'     => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
+		'link'      => isset( $row['link'] ) ? esc_url_raw( $row['link'] ) : '',
+		'extra'     => isset( $row['extra'] ) ? sanitize_text_field( $row['extra'] ) : '',
 	);
 }
 
@@ -268,6 +288,14 @@ function gazettenews_render_section( $section, &$used, $in_column = false ) {
 	}
 	if ( 'shop' === $type ) {
 		gazettenews_home_products( $section['count'], $section['title'] );
+		return;
+	}
+	if ( 'video' === $type ) {
+		gazettenews_render_video_playlist( $section );
+		return;
+	}
+	if ( 'facebook' === $type ) {
+		gazettenews_render_facebook( $section );
 		return;
 	}
 	if ( 'hero' === $type || 'posts' === $type ) {
@@ -361,6 +389,16 @@ function gazettenews_render_posts_module( $section, &$used ) {
 	$title  = $section['title'];
 	$layout = $section['layout'];
 	$count  = absint( $section['count'] );
+	$hstyle = isset( $section['headstyle'] ) ? $section['headstyle'] : 'default';
+
+	if ( 'columns3' === $layout ) {
+		echo '<section class="module module-columns3">';
+		gazettenews_module_header( $title, $cat_id, $hstyle );
+		gazettenews_render_three_columns( $section, $used );
+		echo '</section>';
+		return;
+	}
+
 	if ( 'hero' === $layout && $count < 1 ) {
 		$count = 1;
 	}
@@ -378,7 +416,7 @@ function gazettenews_render_posts_module( $section, &$used ) {
 	}
 
 	echo '<section class="module module-' . esc_attr( $layout ) . '">';
-	gazettenews_module_header( $title, $cat_id );
+	gazettenews_module_header( $title, $cat_id, $hstyle );
 
 	if ( 'hero' === $layout ) {
 		while ( $mod->have_posts() ) {
@@ -422,6 +460,31 @@ function gazettenews_render_posts_module( $section, &$used ) {
 			get_template_part( 'template-parts/content', 'list' );
 		}
 		echo '</div>';
+	} elseif ( 'slider' === $layout ) {
+		$pos     = isset( $section['position'] ) ? $section['position'] : 'full';
+		$visible = ( 'full' === $pos ) ? 4 : ( 'right' === $pos ? 1 : 2 );
+		$visible = min( $visible, max( 1, $count ) );
+		echo '<div class="gn-slider" data-visible="' . esc_attr( (string) $visible ) . '">';
+		echo '<button type="button" class="gn-slide-btn prev" aria-label="' . esc_attr__( 'Previous', 'gazettenews' ) . '">&lsaquo;</button>';
+		echo '<div class="gn-slider-viewport"><div class="gn-slider-track">';
+		while ( $mod->have_posts() ) {
+			$mod->the_post();
+			$used[] = get_the_ID();
+			echo '<div class="gn-slide">';
+			get_template_part( 'template-parts/content', 'round' );
+			echo '</div>';
+		}
+		echo '</div></div>';
+		echo '<button type="button" class="gn-slide-btn next" aria-label="' . esc_attr__( 'Next', 'gazettenews' ) . '">&rsaquo;</button>';
+		echo '</div>';
+	} elseif ( 'grid4' === $layout ) {
+		echo '<div class="grid-module grid-4">';
+		while ( $mod->have_posts() ) {
+			$mod->the_post();
+			$used[] = get_the_ID();
+			get_template_part( 'template-parts/content', 'round' );
+		}
+		echo '</div>';
 	} else {
 		echo '<div class="grid-module">';
 		while ( $mod->have_posts() ) {
@@ -434,4 +497,112 @@ function gazettenews_render_posts_module( $section, &$used ) {
 
 	echo '</section>';
 	wp_reset_postdata();
+}
+
+function gazettenews_render_three_columns( $section, &$used ) {
+	$ids   = array( absint( $section['cat'] ) );
+	$extra = isset( $section['extra'] ) ? $section['extra'] : '';
+	if ( $extra ) {
+		foreach ( explode( ',', $extra ) as $bit ) {
+			$ids[] = absint( trim( $bit ) );
+		}
+	}
+	$ids = array_slice( array_pad( $ids, 3, 0 ), 0, 3 );
+	echo '<div class="triple-cols">';
+	foreach ( $ids as $cid ) {
+		$qargs = array(
+			'posts_per_page' => 4,
+			'post__not_in'   => $used,
+		);
+		if ( $cid ) {
+			$qargs['cat'] = $cid;
+		}
+		$col = gazettenews_query( $qargs );
+		$ttl = $cid ? get_cat_name( $cid ) : __( 'Latest', 'gazettenews' );
+		echo '<div class="triple-col">';
+		echo '<h4 class="triple-title">' . esc_html( $ttl ) . '</h4>';
+		if ( $col->have_posts() ) {
+			while ( $col->have_posts() ) {
+				$col->the_post();
+				$used[] = get_the_ID();
+				get_template_part( 'template-parts/content', 'thumbs' );
+			}
+			wp_reset_postdata();
+		}
+		echo '</div>';
+	}
+	echo '</div>';
+}
+
+function gazettenews_youtube_items( $raw ) {
+	$items = array();
+	if ( ! $raw ) {
+		return $items;
+	}
+	$lines = preg_split( '/\r\n|\r|\n/', $raw );
+	foreach ( $lines as $line ) {
+		$line = trim( wp_strip_all_tags( $line ) );
+		if ( ! $line ) {
+			continue;
+		}
+		$title = '';
+		if ( strpos( $line, '|' ) !== false ) {
+			$parts = array_map( 'trim', explode( '|', $line, 2 ) );
+			$line  = $parts[0];
+			$title = isset( $parts[1] ) ? $parts[1] : '';
+		}
+		$id = '';
+		if ( preg_match( '/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/', $line, $m ) ) {
+			$id = $m[1];
+		} elseif ( preg_match( '/^[A-Za-z0-9_-]{11}$/', $line ) ) {
+			$id = $line;
+		}
+		if ( $id ) {
+			$items[] = array(
+				'id'    => $id,
+				'title' => $title ? $title : $id,
+			);
+		}
+	}
+	return $items;
+}
+
+function gazettenews_render_video_playlist( $section ) {
+	$items = gazettenews_youtube_items( $section['html'] );
+	if ( empty( $items ) ) {
+		return;
+	}
+	$first = $items[0];
+	$style = isset( $section['headstyle'] ) ? $section['headstyle'] : 'bar';
+	echo '<section class="module module-video">';
+	gazettenews_module_header( $section['title'] ? $section['title'] : __( 'Videos', 'gazettenews' ), 0, $style );
+	echo '<div class="video-playlist">';
+	echo '<div class="video-main">';
+	echo '<div class="video-frame"><iframe class="gn-yt-player" src="https://www.youtube.com/embed/' . esc_attr( $first['id'] ) . '" title="YouTube" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></div>';
+	echo '<div class="video-now"><span class="play-ico">▶</span><span class="now-title">' . esc_html( $first['title'] ) . '</span></div>';
+	echo '</div><ul class="video-list">';
+	foreach ( $items as $item ) {
+		$thumb = 'https://i.ytimg.com/vi/' . rawurlencode( $item['id'] ) . '/mqdefault.jpg';
+		echo '<li><button type="button" class="video-item" data-id="' . esc_attr( $item['id'] ) . '" data-title="' . esc_attr( $item['title'] ) . '">';
+		echo '<img src="' . esc_url( $thumb ) . '" alt="">';
+		echo '<span><strong>' . esc_html( $item['title'] ) . '</strong></span>';
+		echo '</button></li>';
+	}
+	echo '</ul></div></section>';
+}
+
+function gazettenews_render_facebook( $section ) {
+	$url = $section['link'] ? $section['link'] : $section['html'];
+	if ( ! $url ) {
+		$url = get_theme_mod( 'gazettenews_social_facebook' );
+	}
+	if ( ! $url ) {
+		return;
+	}
+	$src = 'https://www.facebook.com/plugins/page.php?href=' . rawurlencode( $url ) . '&tabs=timeline&width=340&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true';
+	$style = isset( $section['headstyle'] ) ? $section['headstyle'] : 'bar';
+	echo '<section class="module module-facebook">';
+	gazettenews_module_header( $section['title'] ? $section['title'] : __( 'Follow us', 'gazettenews' ), 0, $style );
+	echo '<div class="fb-embed"><iframe src="' . esc_url( $src ) . '" width="340" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allow="encrypted-media" title="Facebook"></iframe></div>';
+	echo '</section>';
 }

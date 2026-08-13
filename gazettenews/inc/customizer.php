@@ -193,7 +193,7 @@ function gazettenews_customize_register( $wp_customize ) {
 		'panel' => 'gazettenews_panel',
 	) );
 
-	foreach ( array( 'facebook', 'twitter', 'instagram', 'youtube', 'linkedin' ) as $network ) {
+	foreach ( array( 'facebook', 'twitter', 'instagram', 'youtube', 'linkedin', 'telegram', 'whatsapp' ) as $network ) {
 		$wp_customize->add_setting( "gazettenews_social_{$network}", array(
 			'default'           => '',
 			'sanitize_callback' => 'esc_url_raw',
@@ -219,16 +219,31 @@ function gazettenews_customize_register( $wp_customize ) {
 		'section' => 'gazettenews_footer',
 		'type'    => 'textarea',
 	) );
+
+	$wp_customize->add_setting( 'gazettenews_about', array(
+		'default'           => '',
+		'sanitize_callback' => 'wp_kses_post',
+	) );
+	$wp_customize->add_control( 'gazettenews_about', array(
+		'label'   => __( 'Footer About us', 'gazettenews' ),
+		'section' => 'gazettenews_footer',
+		'type'    => 'textarea',
+	) );
 }
 add_action( 'customize_register', 'gazettenews_customize_register' );
 
-function gazettenews_social_links() {
-	$out = '';
-	foreach ( array( 'facebook', 'twitter', 'instagram', 'youtube', 'linkedin' ) as $network ) {
+function gazettenews_social_links( $class = '' ) {
+	$out   = '';
+	$wrap  = $class ? ' class="' . esc_attr( $class ) . '"' : '';
+	$items = array( 'facebook', 'twitter', 'instagram', 'youtube', 'linkedin', 'telegram', 'whatsapp' );
+	foreach ( $items as $network ) {
 		$url = get_theme_mod( "gazettenews_social_{$network}" );
 		if ( $url ) {
 			$out .= '<a class="soc-' . esc_attr( $network ) . '" href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( ucfirst( $network ) ) . '</a>';
 		}
+	}
+	if ( $class && $out ) {
+		return '<div' . $wrap . '>' . $out . '</div>';
 	}
 	return $out;
 }

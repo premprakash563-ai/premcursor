@@ -24,6 +24,52 @@
 			</div>
 		<?php endif; ?>
 
+		<?php
+		$about = get_theme_mod( 'gazettenews_about' );
+		$soc   = gazettenews_social_links();
+		if ( $about || $soc ) :
+			?>
+			<div class="footer-brand">
+				<div class="gn-container footer-brand-inner">
+					<div class="footer-logo">
+						<?php
+						if ( has_custom_logo() ) {
+							the_custom_logo();
+						} else {
+							echo '<a class="brand-lockup" href="' . esc_url( home_url( '/' ) ) . '">';
+							$line1 = get_theme_mod( 'gazettenews_logo_line1' );
+							$line2 = get_theme_mod( 'gazettenews_logo_line2', 'NEWS 24x7' );
+							if ( ! $line1 ) {
+								$line1 = get_bloginfo( 'name' );
+							}
+							echo '<span class="brand-hi">' . esc_html( $line1 ) . '</span>';
+							if ( $line2 ) {
+								echo '<span class="brand-en">' . esc_html( $line2 ) . '</span>';
+							}
+							echo '</a>';
+						}
+						$tag = get_theme_mod( 'gazettenews_tagline' );
+						if ( $tag ) {
+							echo '<p class="site-tagline">' . esc_html( $tag ) . '</p>';
+						}
+						?>
+					</div>
+					<?php if ( $about ) : ?>
+						<div class="footer-about">
+							<h3><?php esc_html_e( 'About us', 'gazettenews' ); ?></h3>
+							<?php echo wp_kses_post( wpautop( $about ) ); ?>
+						</div>
+					<?php endif; ?>
+					<?php if ( $soc ) : ?>
+						<div class="footer-follow">
+							<h3><?php esc_html_e( 'Follow us', 'gazettenews' ); ?></h3>
+							<div class="follow-icons"><?php echo $soc; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+						</div>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<div class="footer-bottom">
 			<div class="gn-container footer-bottom-inner">
 				<div class="copyright">

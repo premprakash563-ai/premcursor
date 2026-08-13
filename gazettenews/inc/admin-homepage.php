@@ -124,7 +124,9 @@ function gazettenews_admin_homepage_page() {
 				<button type="button" class="button gn-add-preset" data-type="ad" data-position="full"><?php esc_html_e( 'Add full-width ad', 'gazettenews' ); ?></button>
 				<button type="button" class="button gn-add-preset" data-type="ad" data-position="right"><?php esc_html_e( 'Add right ad', 'gazettenews' ); ?></button>
 				<button type="button" class="button gn-add-preset" data-type="posts" data-position="left"><?php esc_html_e( 'Add left posts', 'gazettenews' ); ?></button>
-				<button type="button" class="button gn-add-preset" data-type="posts" data-position="right"><?php esc_html_e( 'Add right posts', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="posts" data-position="full" data-layout="slider"><?php esc_html_e( 'Add slider', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="video" data-position="left"><?php esc_html_e( 'Add video playlist', 'gazettenews' ); ?></button>
+				<button type="button" class="button gn-add-preset" data-type="facebook" data-position="right"><?php esc_html_e( 'Add Facebook feed', 'gazettenews' ); ?></button>
 			</p>
 
 			<?php submit_button( __( 'Save homepage', 'gazettenews' ) ); ?>
@@ -141,12 +143,14 @@ function gazettenews_admin_homepage_page() {
 					'enabled'  => true,
 					'title'    => '',
 					'cat'      => 0,
-					'layout'   => 'grid',
-					'count'    => 4,
-					'position' => 'left',
-					'html'     => '',
-					'image'    => '',
-					'link'     => '',
+					'layout'    => 'grid',
+					'count'     => 4,
+					'position'  => 'left',
+					'headstyle' => 'default',
+					'html'      => '',
+					'image'     => '',
+					'link'      => '',
+					'extra'     => '',
 				),
 				$types,
 				$layouts,
@@ -161,8 +165,15 @@ function gazettenews_admin_homepage_page() {
 function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) {
 	$i         = (string) $i;
 	$positions = gazettenews_section_positions();
+	$heads     = gazettenews_header_styles();
 	if ( empty( $section['position'] ) ) {
 		$section['position'] = 'left';
+	}
+	if ( empty( $section['headstyle'] ) ) {
+		$section['headstyle'] = 'default';
+	}
+	if ( ! isset( $section['extra'] ) ) {
+		$section['extra'] = '';
 	}
 	if ( ! isset( $section['image'] ) ) {
 		$section['image'] = '';
@@ -213,28 +224,40 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 					</select>
 				</label>
 				<label class="gn-f gn-f-layout">
-					<?php esc_html_e( 'Layout', 'gazettenews' ); ?>
+					<?php esc_html_e( 'Layout (select Slider where you want a slide)', 'gazettenews' ); ?>
 					<select name="sections[<?php echo esc_attr( $i ); ?>][layout]">
 						<?php foreach ( $layouts as $key => $label ) : ?>
 							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $section['layout'], $key ); ?>><?php echo esc_html( $label ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</label>
+				<label class="gn-f gn-f-head">
+					<?php esc_html_e( 'Title style', 'gazettenews' ); ?>
+					<select name="sections[<?php echo esc_attr( $i ); ?>][headstyle]">
+						<?php foreach ( $heads as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $section['headstyle'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
 				<label class="gn-f gn-f-count">
 					<?php esc_html_e( 'Post count', 'gazettenews' ); ?>
-					<input type="number" min="1" max="12" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
+					<input type="number" min="1" max="16" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
+				</label>
+				<label class="gn-f gn-f-extra">
+					<?php esc_html_e( 'Extra category IDs (for 3 columns)', 'gazettenews' ); ?>
+					<input type="text" name="sections[<?php echo esc_attr( $i ); ?>][extra]" value="<?php echo esc_attr( $section['extra'] ); ?>" placeholder="12,34">
 				</label>
 				<label class="gn-f gn-f-image">
 					<?php esc_html_e( 'Ad image URL', 'gazettenews' ); ?>
 					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][image]" value="<?php echo esc_attr( $section['image'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-link">
-					<?php esc_html_e( 'Ad link URL', 'gazettenews' ); ?>
+					<?php esc_html_e( 'Ad / Facebook page URL', 'gazettenews' ); ?>
 					<input type="url" name="sections[<?php echo esc_attr( $i ); ?>][link]" value="<?php echo esc_attr( $section['link'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-html">
-					<?php esc_html_e( 'HTML / ad code', 'gazettenews' ); ?>
-					<textarea name="sections[<?php echo esc_attr( $i ); ?>][html]" rows="3"><?php echo esc_textarea( $section['html'] ); ?></textarea>
+					<?php esc_html_e( 'HTML / YouTube lines (url | title) / Facebook uses Link', 'gazettenews' ); ?>
+					<textarea name="sections[<?php echo esc_attr( $i ); ?>][html]" rows="3" placeholder="https://youtu.be/xxxxxxxxxxx | Video title"><?php echo esc_textarea( $section['html'] ); ?></textarea>
 				</label>
 			</div>
 		</div>

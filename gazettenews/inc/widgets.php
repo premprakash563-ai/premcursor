@@ -283,10 +283,45 @@ class GazetteNews_Newsletter extends WP_Widget {
 	}
 }
 
+class GazetteNews_Categories extends WP_Widget {
+
+	public function __construct() {
+		parent::__construct(
+			'gazettenews_cats',
+			__( 'Gazette: Categories + counts', 'gazettenews' ),
+			array( 'description' => __( 'Category list with post counts.', 'gazettenews' ) )
+		);
+	}
+
+	public function widget( $args, $instance ) {
+		$title = ! empty( $instance['title'] ) ? $instance['title'] : __( 'Popular Category', 'gazettenews' );
+		echo $args['before_widget']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $args['before_title'] . esc_html( $title ) . $args['after_title']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		$cats = get_categories( array( 'orderby' => 'count', 'order' => 'DESC', 'number' => 12 ) );
+		echo '<ul class="gn-cat-counts">';
+		foreach ( $cats as $cat ) {
+			echo '<li><a href="' . esc_url( get_category_link( $cat->term_id ) ) . '">' . esc_html( $cat->name ) . '</a><span>' . esc_html( (string) $cat->count ) . '</span></li>';
+		}
+		echo '</ul>';
+		echo $args['after_widget']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	public function form( $instance ) {
+		$title = isset( $instance['title'] ) ? $instance['title'] : __( 'Popular Category', 'gazettenews' );
+		echo '<p><label>' . esc_html__( 'Title', 'gazettenews' ) . '</label>';
+		echo '<input class="widefat" name="' . esc_attr( $this->get_field_name( 'title' ) ) . '" value="' . esc_attr( $title ) . '"></p>';
+	}
+
+	public function update( $new, $old ) {
+		return array( 'title' => sanitize_text_field( $new['title'] ) );
+	}
+}
+
 function gazettenews_register_widgets() {
 	register_widget( 'GazetteNews_Popular_Posts' );
 	register_widget( 'GazetteNews_Category_Posts' );
 	register_widget( 'GazetteNews_Ad_Widget' );
 	register_widget( 'GazetteNews_Newsletter' );
+	register_widget( 'GazetteNews_Categories' );
 }
 add_action( 'widgets_init', 'gazettenews_register_widgets' );
