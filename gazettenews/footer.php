@@ -120,7 +120,7 @@
 	<a class="gn-top" href="#page" aria-label="<?php esc_attr_e( 'Back to top', 'gazettenews' ); ?>">↑</a>
 </div><!-- #page -->
 
-<div id="gn-search-modal" class="gn-search-modal" hidden>
+<div id="gn-search-modal" class="gn-search-modal" aria-hidden="true">
 	<button type="button" class="gn-search-backdrop" data-gn-search-close aria-label="<?php esc_attr_e( 'Close search', 'gazettenews' ); ?>"></button>
 	<div class="gn-search-panel" role="dialog" aria-modal="true" aria-labelledby="gn-search-title">
 		<button type="button" class="gn-search-close" data-gn-search-close>

@@ -14,12 +14,7 @@ function gazettenews_youtube_api_key() {
 	if ( $key ) {
 		return $key;
 	}
-	$mod = trim( (string) get_theme_mod( 'gazettenews_youtube_api_key', '' ) );
-	if ( $mod ) {
-		update_option( 'gazettenews_youtube_api_key', $mod, false );
-		return $mod;
-	}
-	return '';
+	return trim( (string) get_theme_mod( 'gazettenews_youtube_api_key', '' ) );
 }
 
 function gazettenews_save_youtube_api_key( $key ) {
@@ -48,8 +43,6 @@ function gazettenews_sanitize_youtube_api_key( $value ) {
 	}
 	return $value;
 }
-
-add_action( 'init', 'gazettenews_youtube_api_key' );
 
 function gazettenews_youtube_duration( $iso ) {
 	if ( ! $iso || ! preg_match( '/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/', $iso, $m ) ) {
@@ -94,9 +87,15 @@ function gazettenews_youtube_request( $endpoint, $args ) {
 		return $cached;
 	}
 
-	$response = wp_remote_get( $url, array( 'timeout' => 15 ) );
+	$response = wp_remote_get(
+		$url,
+		array(
+			'timeout'     => 4,
+			'redirection' => 2,
+		)
+	);
 	if ( is_wp_error( $response ) ) {
-		update_option( 'gazettenews_youtube_last_error', $response->get_error_message(), false );
+		set_transient( $cache_key, array(), 10 * MINUTE_IN_SECONDS );
 		return array();
 	}
 	$code = wp_remote_retrieve_response_code( $response );
@@ -108,12 +107,14 @@ function gazettenews_youtube_request( $endpoint, $args ) {
 		} elseif ( $code ) {
 			$msg = sprintf( 'YouTube API HTTP %d', absint( $code ) );
 		}
-		update_option( 'gazettenews_youtube_last_error', $msg, false );
+		if ( $msg ) {
+			update_option( 'gazettenews_youtube_last_error', $msg, false );
+		}
+		set_transient( $cache_key, array(), 10 * MINUTE_IN_SECONDS );
 		return array();
 	}
 
-	update_option( 'gazettenews_youtube_last_error', '', false );
-	set_transient( $cache_key, $body, 6 * HOUR_IN_SECONDS );
+	set_transient( $cache_key, $body, 12 * HOUR_IN_SECONDS );
 	return $body;
 }
 

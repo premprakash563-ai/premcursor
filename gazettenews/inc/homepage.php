@@ -622,7 +622,12 @@ function gazettenews_youtube_items( $raw, $max = 50, $channel = '' ) {
 	$items     = array();
 	$playlists = array();
 	$channels  = array();
-	$max       = min( 100, max( 1, absint( $max ) ) );
+	$max       = min( 12, max( 1, absint( $max ) ) );
+	$feed_key  = 'gn_yt_feed_' . md5( (string) $raw . '|' . $max . '|' . (string) $channel . '|' . absint( get_option( 'gazettenews_yt_cache_v', 1 ) ) );
+	$cached    = get_transient( $feed_key );
+	if ( is_array( $cached ) ) {
+		return $cached;
+	}
 	$lines     = preg_split( '/\r\n|\r|\n/', (string) $raw );
 	foreach ( $lines as $line ) {
 		$line = trim( wp_strip_all_tags( $line ) );
@@ -712,11 +717,13 @@ function gazettenews_youtube_items( $raw, $max = 50, $channel = '' ) {
 		}
 	}
 
-	return gazettenews_youtube_hydrate( $uniq );
+	$uniq = gazettenews_youtube_hydrate( $uniq );
+	set_transient( $feed_key, $uniq, 12 * HOUR_IN_SECONDS );
+	return $uniq;
 }
 
 function gazettenews_render_video_playlist( $section ) {
-	$max   = isset( $section['count'] ) ? absint( $section['count'] ) : 50;
+	$max   = min( 12, isset( $section['count'] ) ? absint( $section['count'] ) : 8 );
 	$link  = isset( $section['link'] ) ? $section['link'] : '';
 	$items = gazettenews_youtube_items( isset( $section['html'] ) ? $section['html'] : '', $max, $link );
 	if ( empty( $items ) ) {
@@ -724,11 +731,17 @@ function gazettenews_render_video_playlist( $section ) {
 	}
 	$first = $items[0];
 	$style = isset( $section['headstyle'] ) ? $section['headstyle'] : 'bar';
+	$poster = ! empty( $first['thumb'] ) ? $first['thumb'] : 'https://i.ytimg.com/vi/' . rawurlencode( $first['id'] ) . '/hqdefault.jpg';
 	echo '<section class="module module-video">';
 	gazettenews_module_header( $section['title'] ? $section['title'] : __( 'Videos', 'gazettenews' ), 0, $style );
 	echo '<div class="video-playlist">';
 	echo '<div class="video-main">';
-	echo '<div class="video-frame"><iframe class="gn-yt-player" src="https://www.youtube.com/embed/' . esc_attr( $first['id'] ) . '" title="YouTube" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></div>';
+	echo '<div class="video-frame">';
+	echo '<button type="button" class="gn-yt-poster" data-id="' . esc_attr( $first['id'] ) . '" aria-label="' . esc_attr__( 'Play video', 'gazettenews' ) . '">';
+	echo '<img src="' . esc_url( $poster ) . '" alt="" loading="lazy" decoding="async">';
+	echo '<span class="gn-yt-play">▶</span></button>';
+	echo '<iframe class="gn-yt-player" data-src="https://www.youtube.com/embed/' . esc_attr( $first['id'] ) . '" title="YouTube" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe>';
+	echo '</div>';
 	echo '<div class="video-now"><span class="play-ico">▶</span><span class="now-title">' . esc_html( $first['title'] ? $first['title'] : __( 'Now playing', 'gazettenews' ) ) . '</span>';
 	if ( ! empty( $first['duration'] ) ) {
 		echo '<span class="now-dur">' . esc_html( $first['duration'] ) . '</span>';
@@ -737,7 +750,7 @@ function gazettenews_render_video_playlist( $section ) {
 	foreach ( $items as $item ) {
 		$thumb = ! empty( $item['thumb'] ) ? $item['thumb'] : 'https://i.ytimg.com/vi/' . rawurlencode( $item['id'] ) . '/mqdefault.jpg';
 		echo '<li><button type="button" class="video-item" data-id="' . esc_attr( $item['id'] ) . '" data-title="' . esc_attr( $item['title'] ) . '">';
-		echo '<img src="' . esc_url( $thumb ) . '" alt="">';
+		echo '<img src="' . esc_url( $thumb ) . '" alt="" loading="lazy" decoding="async">';
 		echo '<span><strong>' . esc_html( $item['title'] ? $item['title'] : $item['id'] ) . '</strong>';
 		if ( ! empty( $item['duration'] ) ) {
 			echo '<em>' . esc_html( $item['duration'] ) . '</em>';
@@ -759,6 +772,6 @@ function gazettenews_render_facebook( $section ) {
 	$style = isset( $section['headstyle'] ) ? $section['headstyle'] : 'bar';
 	echo '<section class="module module-facebook">';
 	gazettenews_module_header( $section['title'] ? $section['title'] : __( 'Follow us', 'gazettenews' ), 0, $style );
-	echo '<div class="fb-embed"><iframe src="' . esc_url( $src ) . '" width="340" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allow="encrypted-media" title="Facebook"></iframe></div>';
+	echo '<div class="fb-embed"><iframe src="' . esc_url( $src ) . '" width="340" height="500" style="border:none;overflow:hidden" scrolling="no" loading="lazy" frameborder="0" allow="encrypted-media" title="Facebook"></iframe></div>';
 	echo '</section>';
 }
