@@ -84,6 +84,17 @@ function gazettenews_customize_register( $wp_customize ) {
 		'type'    => 'checkbox',
 	) );
 
+	$wp_customize->add_setting( 'gazettenews_youtube_api_key', array(
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_text_field',
+	) );
+	$wp_customize->add_control( 'gazettenews_youtube_api_key', array(
+		'label'       => __( 'YouTube Data API key', 'gazettenews' ),
+		'description' => __( 'Used for video playlist titles and durations. Restrict this key to YouTube Data API v3 and your domain.', 'gazettenews' ),
+		'section'     => 'gazettenews_header',
+		'type'        => 'password',
+	) );
+
 	$wp_customize->add_setting( 'gazettenews_breaking_label', array(
 		'default'           => __( 'BREAKING NEWS', 'gazettenews' ),
 		'sanitize_callback' => 'sanitize_text_field',

@@ -539,7 +539,8 @@ function gazettenews_youtube_items( $raw ) {
 	if ( ! $raw ) {
 		return $items;
 	}
-	$lines = preg_split( '/\r\n|\r|\n/', $raw );
+	$playlists = array();
+	$lines     = preg_split( '/\r\n|\r|\n/', $raw );
 	foreach ( $lines as $line ) {
 		$line = trim( wp_strip_all_tags( $line ) );
 		if ( ! $line ) {
@@ -551,20 +552,41 @@ function gazettenews_youtube_items( $raw ) {
 			$line  = $parts[0];
 			$title = isset( $parts[1] ) ? $parts[1] : '';
 		}
+		if ( preg_match( '/[?&]list=([A-Za-z0-9_-]+)/', $line, $pm ) ) {
+			$playlists[] = $pm[1];
+			continue;
+		}
 		$id = '';
 		if ( preg_match( '/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/', $line, $m ) ) {
 			$id = $m[1];
 		} elseif ( preg_match( '/^[A-Za-z0-9_-]{11}$/', $line ) ) {
 			$id = $line;
+		} elseif ( preg_match( '/^(PL|UU|LL|FL)[A-Za-z0-9_-]{10,}$/', $line ) ) {
+			$playlists[] = $line;
+			continue;
 		}
 		if ( $id ) {
 			$items[] = array(
-				'id'    => $id,
-				'title' => $title ? $title : $id,
+				'id'       => $id,
+				'title'    => $title,
+				'duration' => '',
+				'thumb'    => '',
 			);
 		}
 	}
-	return $items;
+
+	foreach ( $playlists as $pid ) {
+		foreach ( gazettenews_youtube_playlist_ids( $pid, 15 ) as $vid ) {
+			$items[] = array(
+				'id'       => $vid,
+				'title'    => '',
+				'duration' => '',
+				'thumb'    => '',
+			);
+		}
+	}
+
+	return gazettenews_youtube_hydrate( $items );
 }
 
 function gazettenews_render_video_playlist( $section ) {
@@ -579,14 +601,20 @@ function gazettenews_render_video_playlist( $section ) {
 	echo '<div class="video-playlist">';
 	echo '<div class="video-main">';
 	echo '<div class="video-frame"><iframe class="gn-yt-player" src="https://www.youtube.com/embed/' . esc_attr( $first['id'] ) . '" title="YouTube" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></div>';
-	echo '<div class="video-now"><span class="play-ico">▶</span><span class="now-title">' . esc_html( $first['title'] ) . '</span></div>';
-	echo '</div><ul class="video-list">';
+	echo '<div class="video-now"><span class="play-ico">▶</span><span class="now-title">' . esc_html( $first['title'] ? $first['title'] : __( 'Now playing', 'gazettenews' ) ) . '</span>';
+	if ( ! empty( $first['duration'] ) ) {
+		echo '<span class="now-dur">' . esc_html( $first['duration'] ) . '</span>';
+	}
+	echo '</div></div><ul class="video-list">';
 	foreach ( $items as $item ) {
-		$thumb = 'https://i.ytimg.com/vi/' . rawurlencode( $item['id'] ) . '/mqdefault.jpg';
+		$thumb = ! empty( $item['thumb'] ) ? $item['thumb'] : 'https://i.ytimg.com/vi/' . rawurlencode( $item['id'] ) . '/mqdefault.jpg';
 		echo '<li><button type="button" class="video-item" data-id="' . esc_attr( $item['id'] ) . '" data-title="' . esc_attr( $item['title'] ) . '">';
 		echo '<img src="' . esc_url( $thumb ) . '" alt="">';
-		echo '<span><strong>' . esc_html( $item['title'] ) . '</strong></span>';
-		echo '</button></li>';
+		echo '<span><strong>' . esc_html( $item['title'] ? $item['title'] : $item['id'] ) . '</strong>';
+		if ( ! empty( $item['duration'] ) ) {
+			echo '<em>' . esc_html( $item['duration'] ) . '</em>';
+		}
+		echo '</span></button></li>';
 	}
 	echo '</ul></div></section>';
 }

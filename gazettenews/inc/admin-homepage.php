@@ -51,6 +51,13 @@ function gazettenews_admin_homepage_save() {
 	}
 	update_option( 'gazettenews_home_mode', $mode );
 
+	if ( isset( $_POST['youtube_api_key'] ) ) {
+		$key = sanitize_text_field( wp_unslash( $_POST['youtube_api_key'] ) );
+		if ( '' !== $key ) {
+			set_theme_mod( 'gazettenews_youtube_api_key', $key );
+		}
+	}
+
 	$raw = isset( $_POST['sections'] ) && is_array( $_POST['sections'] ) ? wp_unslash( $_POST['sections'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	$out = array();
 	foreach ( $raw as $row ) {
@@ -103,6 +110,17 @@ function gazettenews_admin_homepage_page() {
 						</fieldset>
 						<p class="description">
 							<?php esc_html_e( 'Block editor mode needs Settings → Reading → A static page as the homepage. Insert Gazette News blocks from the block inserter.', 'gazettenews' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th><?php esc_html_e( 'YouTube API key', 'gazettenews' ); ?></th>
+					<td>
+						<input type="password" class="regular-text" name="youtube_api_key" value="" autocomplete="off" placeholder="<?php echo gazettenews_youtube_api_key() ? esc_attr__( 'Saved — paste a new key to replace', 'gazettenews' ) : ''; ?>">
+						<p class="description">
+							<?php echo gazettenews_youtube_api_key()
+								? esc_html__( 'A key is saved. Playlist titles and durations load from YouTube Data API v3.', 'gazettenews' )
+								: esc_html__( 'Paste your YouTube Data API v3 key. Then add a Video playlist section with video URLs or a playlist URL.', 'gazettenews' ); ?>
 						</p>
 					</td>
 				</tr>
