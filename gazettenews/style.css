@@ -1,0 +1,17 @@
+/*
+Theme Name: Gazette News
+Theme URI: https://example.com/gazette-news
+Author: Gazette News
+Author URI: https://example.com
+Description: A news, magazine, and WooCommerce WordPress theme inspired by classic newspaper layouts. Breaking ticker, featured mosaic, category modules, mega menu, and a complete shop.
+Version: 1.0.0
+Requires at least: 6.0
+Tested up to: 6.6
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: gazettenews
+Tags: news, magazine, blog, e-commerce, grid-layout, one-column, two-columns, three-columns, right-sidebar, custom-logo, custom-menu, featured-images, footer-widgets, sticky-post, theme-options, translation-ready, woocommerce
+*/
+
+/* Base styles live in assets/css/main.css — loaded by functions.php */
