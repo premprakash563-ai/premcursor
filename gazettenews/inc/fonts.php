@@ -64,6 +64,22 @@ function gazettenews_sanitize_font_key( $value ) {
 	return isset( $ok[ $value ] ) ? $value : '';
 }
 
+function gazettenews_sanitize_font_size( $value, $min = 0, $max = 64 ) {
+	$size = absint( $value );
+	$min  = absint( $min );
+	$max  = absint( $max );
+	if ( $max < $min ) {
+		$max = $min;
+	}
+	if ( $size < $min ) {
+		return $min;
+	}
+	if ( $size > $max ) {
+		return $max;
+	}
+	return $size;
+}
+
 function gazettenews_sanitize_body_size( $value ) {
 	$size = gazettenews_sanitize_font_size( $value, 12, 22 );
 	return $size ? $size : 15;

@@ -17,8 +17,12 @@ function gazettenews_yoast_handles_og() {
 	if ( ! gazettenews_has_yoast() ) {
 		return false;
 	}
-	if ( class_exists( 'WPSEO_Options' ) ) {
+	if ( class_exists( 'WPSEO_Options' ) && method_exists( 'WPSEO_Options', 'get' ) ) {
 		return (bool) WPSEO_Options::get( 'opengraph', true );
+	}
+	$social = get_option( 'wpseo_social', array() );
+	if ( is_array( $social ) && array_key_exists( 'opengraph', $social ) ) {
+		return ! empty( $social['opengraph'] );
 	}
 	return true;
 }
@@ -56,6 +60,17 @@ function gazettenews_share_image_url( $post_id = 0 ) {
 	return ! empty( $data['url'] ) ? $data['url'] : '';
 }
 
+function gazettenews_plain_description( $post = null ) {
+	$post = $post ? $post : get_post();
+	if ( ! $post || ( empty( $post->post_content ) && empty( $post->post_excerpt ) ) ) {
+		return get_bloginfo( 'description' );
+	}
+	$raw = ! empty( $post->post_excerpt ) ? $post->post_excerpt : $post->post_content;
+	$raw = wp_strip_all_tags( strip_shortcodes( $raw ) );
+	$raw = wp_trim_words( $raw, 30, '…' );
+	return $raw ? $raw : get_bloginfo( 'description' );
+}
+
 function gazettenews_social_meta() {
 	if ( gazettenews_yoast_handles_og() ) {
 		return;
@@ -68,19 +83,19 @@ function gazettenews_social_meta() {
 	$type  = 'website';
 
 	if ( is_singular() ) {
+		$post = get_queried_object();
 		$url  = get_permalink();
 		$type = is_singular( 'post' ) ? 'article' : 'website';
-		$raw  = has_excerpt() ? get_the_excerpt() : wp_strip_all_tags( get_the_content( null, false, get_post() ) );
-		$desc = $raw ? wp_trim_words( $raw, 30, '…' ) : $desc;
+		$desc = gazettenews_plain_description( $post );
 	} elseif ( is_category() || is_tag() || is_tax() ) {
 		$term = get_queried_object();
-		$url  = get_term_link( $term );
-		if ( ! is_wp_error( $url ) ) {
-			$title = single_term_title( '', false ) . ' — ' . get_bloginfo( 'name' );
-		} else {
+		$url  = ( $term && ! is_wp_error( $term ) ) ? get_term_link( $term ) : home_url( '/' );
+		if ( is_wp_error( $url ) ) {
 			$url = home_url( '/' );
+		} else {
+			$title = single_term_title( '', false ) . ' — ' . get_bloginfo( 'name' );
 		}
-		if ( ! empty( $term->description ) ) {
+		if ( $term && ! empty( $term->description ) ) {
 			$desc = wp_trim_words( wp_strip_all_tags( $term->description ), 30, '…' );
 		}
 	}
