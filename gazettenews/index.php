@@ -10,6 +10,7 @@ get_header();
 
 <div class="gn-container layout-with-sidebar">
 	<main id="primary" class="content-area">
+		<?php gazettenews_breadcrumbs(); ?>
 		<?php if ( is_home() && ! is_front_page() ) : ?>
 			<header class="archive-head">
 				<h1><?php echo esc_html( get_the_title( get_option( 'page_for_posts' ) ) ); ?></h1>

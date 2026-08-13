@@ -10,6 +10,7 @@ get_header();
 
 <div class="gn-container layout-with-sidebar">
 	<main id="primary" class="content-area">
+		<?php gazettenews_breadcrumbs(); ?>
 		<?php
 		while ( have_posts() ) :
 			the_post();

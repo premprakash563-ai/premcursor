@@ -72,6 +72,7 @@ function gazettenews_svg_icon( $name ) {
 		'linkedin'  => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.5 9H3.7v11.3h2.8V9zM5.1 3.3A1.8 1.8 0 1 0 5.1 7a1.8 1.8 0 0 0 0-3.7zM20.3 13.2c0-3.3-1.8-4.8-4.1-4.8-1.9 0-2.7 1-3.2 1.8V9H10.2c0 1.6 0 11.3 0 11.3h2.8v-6.3c0-.3 0-.7.1-1 .3-.7.9-1.4 2-1.4 1.4 0 2 1.1 2 2.6v6.1h2.8V13.2z"/></svg>',
 		'telegram'  => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M21.5 4.4 18.7 20c-.2.9-.8 1.1-1.6.7l-4.4-3.2-2.1 2c-.2.3-.5.5-1 .5l.3-4.5 8.2-7.4c.4-.3-.1-.5-.6-.2l-10.1 6.4-4.4-1.4c-1-.3-1-.9.2-1.3L20.2 3.6c.8-.3 1.5.2 1.3.8z"/></svg>',
 		'whatsapp'  => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.6 14.3c-.2.7-1.3 1.2-1.8 1.3-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.2-.2-1.3-1.7-1.3-3.3 0-1.5.8-2.3 1.1-2.6.3-.3.7-.4 1-.4h.7c.2 0 .5 0 .7.6.3.7 1 2.4 1.1 2.5.1.2.1.4 0 .6-.1.2-.2.4-.4.6l-.5.6c-.2.2-.3.4-.1.7.2.4.8 1.4 1.8 2.2 1.2 1 2.2 1.4 2.6 1.5.3.1.6.1.8-.1.2-.2.9-1 1.1-1.4.2-.3.5-.3.8-.2.3.1 2 .9 2.3 1.1.3.2.5.2.6.4.1.1.1.8-.1 1.5z"/></svg>',
+		'pinterest' => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.6 19.3c-.1-.8-.2-2 0-2.9l1.3-5.5s-.3-.7-.3-1.7c0-1.6.9-2.8 2.1-2.8 1 0 1.5.7 1.5 1.6 0 1-.6 2.4-.9 3.7-.3 1.1.5 2 1.6 2 1.9 0 3.2-2.4 3.2-5.3 0-2.2-1.5-3.8-4.2-3.8-3.1 0-5 2.3-5 4.8 0 .9.3 1.8.7 2.4.1.1.1.2.1.3l-.3 1c0 .2-.2.3-.4.2-1.5-.6-2.2-2.3-2.2-4.2 0-3.1 2.6-6.9 7.8-6.9 4.2 0 6.9 3 6.9 6.3 0 4.3-2.4 7.5-5.9 7.5-1.2 0-2.3-.6-2.7-1.4l-.7 2.8c-.3 1-1 2.2-1.5 3A10 10 0 1 0 12 2z"/></svg>',
 		'email'     => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 8 8-5H4l8 5zm0 2L4 10v8h16v-8l-8 5z"/></svg>',
 		'website'   => '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm7.4 9h-3.2a15 15 0 0 0-1.3-5.2A8.1 8.1 0 0 1 19.4 11zM12 4c.7 0 2.2 2.1 2.8 6H9.2C9.8 6.1 11.3 4 12 4zM4.6 13h3.2a15 15 0 0 0 1.3 5.2A8.1 8.1 0 0 1 4.6 13zm3.2-2H4.6A8.1 8.1 0 0 1 9.1 5.8 15 15 0 0 0 7.8 11zM12 20c-.7 0-2.2-2.1-2.8-6h5.6c-.6 3.9-2.1 6-2.8 6zm2.9-1.8A15 15 0 0 0 16.2 13h3.2a8.1 8.1 0 0 1-4.5 5.2z"/></svg>',
 		'eye'       => '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 5c5.5 0 9.5 4.5 10.5 7-1 2.5-5 7-10.5 7S2.5 14.5 1.5 12C2.5 9.5 6.5 5 12 5zm0 3.5A3.5 3.5 0 1 0 15.5 12 3.5 3.5 0 0 0 12 8.5z"/></svg>',
@@ -81,23 +82,31 @@ function gazettenews_svg_icon( $name ) {
 }
 
 function gazettenews_share_links( $context = 'default' ) {
-	$url   = rawurlencode( get_permalink() );
-	$title = rawurlencode( get_the_title() );
-	$plain = get_permalink();
+	$url     = get_permalink();
+	$title   = get_the_title();
+	$enc_url = rawurlencode( $url );
+	$enc_ttl = rawurlencode( $title );
+	$image   = gazettenews_share_image_url();
+	$enc_img = $image ? rawurlencode( $image ) : '';
+	$wa_text = $title . "\n" . $url;
+	if ( $image ) {
+		$wa_text .= "\n" . $image;
+	}
 	$links = array(
-		'facebook' => array( __( 'Facebook', 'gazettenews' ), 'https://www.facebook.com/sharer/sharer.php?u=' . $url ),
-		'twitter'  => array( __( 'X', 'gazettenews' ), 'https://twitter.com/intent/tweet?url=' . $url . '&text=' . $title ),
-		'whatsapp' => array( __( 'WhatsApp', 'gazettenews' ), 'https://api.whatsapp.com/send?text=' . $title . '%20' . $url ),
-		'telegram' => array( __( 'Telegram', 'gazettenews' ), 'https://t.me/share/url?url=' . $url . '&text=' . $title ),
-		'linkedin' => array( __( 'LinkedIn', 'gazettenews' ), 'https://www.linkedin.com/shareArticle?mini=true&url=' . $url . '&title=' . $title ),
-		'email'    => array( __( 'Email', 'gazettenews' ), 'mailto:?subject=' . $title . '&body=' . $url ),
+		'facebook' => array( __( 'Facebook', 'gazettenews' ), 'https://www.facebook.com/sharer/sharer.php?u=' . $enc_url ),
+		'twitter'  => array( __( 'X', 'gazettenews' ), 'https://twitter.com/intent/tweet?url=' . $enc_url . '&text=' . $enc_ttl ),
+		'whatsapp' => array( __( 'WhatsApp', 'gazettenews' ), 'https://api.whatsapp.com/send?text=' . rawurlencode( $wa_text ) ),
+		'telegram' => array( __( 'Telegram', 'gazettenews' ), 'https://t.me/share/url?url=' . $enc_url . '&text=' . $enc_ttl ),
+		'linkedin' => array( __( 'LinkedIn', 'gazettenews' ), 'https://www.linkedin.com/shareArticle?mini=true&url=' . $enc_url . '&title=' . $enc_ttl ),
+		'pinterest'=> array( __( 'Pinterest', 'gazettenews' ), 'https://pinterest.com/pin/create/button/?url=' . $enc_url . '&description=' . $enc_ttl . ( $enc_img ? '&media=' . $enc_img : '' ) ),
+		'email'    => array( __( 'Email', 'gazettenews' ), 'mailto:?subject=' . $enc_ttl . '&body=' . $enc_url ),
 	);
 	echo '<div class="gn-share gn-share-' . esc_attr( $context ) . '">';
 	echo '<span>' . esc_html__( 'Share', 'gazettenews' ) . '</span>';
 	foreach ( $links as $network => $item ) {
 		echo '<a class="share-' . esc_attr( $network ) . '" href="' . esc_url( $item[1] ) . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr( $item[0] ) . '">' . gazettenews_svg_icon( $network ) . '</a>';
 	}
-	echo '<button type="button" class="share-copy" data-url="' . esc_attr( $plain ) . '" data-done="' . esc_attr__( 'Copied', 'gazettenews' ) . '" aria-label="' . esc_attr__( 'Copy link', 'gazettenews' ) . '">' . gazettenews_svg_icon( 'copy' ) . '</button>';
+	echo '<button type="button" class="share-copy" data-url="' . esc_attr( $url ) . '" data-done="' . esc_attr__( 'Copied', 'gazettenews' ) . '" aria-label="' . esc_attr__( 'Copy link', 'gazettenews' ) . '">' . gazettenews_svg_icon( 'copy' ) . '</button>';
 	echo '</div>';
 }
 

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GAZETTENEWS_VERSION', '1.1.5' );
+define( 'GAZETTENEWS_VERSION', '1.1.6' );
 define( 'GAZETTENEWS_DIR', get_template_directory() );
 define( 'GAZETTENEWS_URI', get_template_directory_uri() );
 
@@ -23,6 +23,7 @@ require_once GAZETTENEWS_DIR . '/inc/youtube.php';
 require_once GAZETTENEWS_DIR . '/inc/homepage.php';
 require_once GAZETTENEWS_DIR . '/inc/blocks.php';
 require_once GAZETTENEWS_DIR . '/inc/admin-homepage.php';
+require_once GAZETTENEWS_DIR . '/inc/seo.php';
 
 /**
  * Theme setup.
@@ -48,6 +49,7 @@ function gazettenews_setup() {
 	add_theme_support( 'responsive-embeds' );
 	add_theme_support( 'wp-block-styles' );
 	add_theme_support( 'editor-styles' );
+	add_theme_support( 'yoast-seo-breadcrumbs' );
 
 	set_post_thumbnail_size( 800, 500, true );
 	add_image_size( 'gazettenews-featured', 1200, 720, true );

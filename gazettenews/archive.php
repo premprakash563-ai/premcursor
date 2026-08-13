@@ -10,6 +10,7 @@ get_header();
 
 <div class="gn-container layout-with-sidebar">
 	<main id="primary" class="content-area">
+		<?php gazettenews_breadcrumbs(); ?>
 		<header class="archive-head">
 			<?php
 			the_archive_title( '<h1>', '</h1>' );
