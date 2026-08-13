@@ -9,11 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GAZETTENEWS_VERSION', '1.1.3' );
+define( 'GAZETTENEWS_VERSION', '1.1.4' );
 define( 'GAZETTENEWS_DIR', get_template_directory() );
 define( 'GAZETTENEWS_URI', get_template_directory_uri() );
 
 require_once GAZETTENEWS_DIR . '/inc/template-tags.php';
+require_once GAZETTENEWS_DIR . '/inc/fonts.php';
 require_once GAZETTENEWS_DIR . '/inc/customizer.php';
 require_once GAZETTENEWS_DIR . '/inc/widgets.php';
 require_once GAZETTENEWS_DIR . '/inc/woocommerce.php';
@@ -161,7 +162,7 @@ function gazettenews_scripts() {
 
 	wp_enqueue_style(
 		'gazettenews-fonts',
-		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap',
+		gazettenews_google_fonts_url(),
 		array(),
 		null
 	);
@@ -201,7 +202,7 @@ function gazettenews_scripts() {
 		$footer_hi = '#ffe14a';
 	}
 	$ticker   = gazettenews_sanitize_ticker_speed( get_theme_mod( 'gazettenews_breaking_speed', 40 ) );
-	$css_vars = ':root{--gn-accent:' . $accent . ';--gn-menu:' . $menu . ';--gn-max:' . gazettenews_container_width() . 'px;--gn-footer-bg:' . $footer_bg . ';--gn-footer-bar:' . $footer_bar . ';--gn-footer-hi:' . $footer_hi . ';--gn-ticker:' . $ticker . 's;}';
+	$css_vars = ':root{--gn-accent:' . $accent . ';--gn-menu:' . $menu . ';--gn-max:' . gazettenews_container_width() . 'px;--gn-footer-bg:' . $footer_bg . ';--gn-footer-bar:' . $footer_bar . ';--gn-footer-hi:' . $footer_hi . ';--gn-ticker:' . $ticker . 's;' . gazettenews_font_css_vars() . '}';
 	$footer_img = get_theme_mod( 'gazettenews_footer_image' );
 	if ( $footer_img ) {
 		$css_vars .= '.site-footer{background-image:url(' . esc_url( $footer_img ) . ');}';

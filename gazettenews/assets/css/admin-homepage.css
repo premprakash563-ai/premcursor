@@ -13,7 +13,8 @@
 .gn-section-main { flex: 1; }
 .gn-section-top { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 .gn-section-top .gn-remove { margin-left: auto; color: #b32d2e; }
-.gn-fields { display: grid; grid-template-columns: 1.4fr 1fr 1fr 90px; gap: 10px; }
+.gn-fields { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px; }
+.gn-f-tsize, .gn-f-fsize, .gn-f-count { min-width: 0; }
 .gn-f { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 12px; }
 .gn-f input, .gn-f select, .gn-f textarea { font-weight: 400; width: 100%; }
 .gn-f-html, .gn-f-image, .gn-f-link { grid-column: 1 / -1; }

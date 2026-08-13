@@ -39,6 +39,78 @@ function gazettenews_customize_register( $wp_customize ) {
 		'section' => 'gazettenews_branding',
 	) ) );
 
+	$wp_customize->add_section( 'gazettenews_fonts', array(
+		'title'    => __( 'Fonts (section-wise)', 'gazettenews' ),
+		'panel'    => 'gazettenews_panel',
+		'priority' => 2,
+	) );
+
+	$font_choices = gazettenews_font_choices();
+	$font_fields  = array(
+		'gazettenews_font_body'         => __( 'Body / site text', 'gazettenews' ),
+		'gazettenews_font_heading'      => __( 'Headings (h1–h4, cards)', 'gazettenews' ),
+		'gazettenews_font_logo'         => __( 'Logo text', 'gazettenews' ),
+		'gazettenews_font_menu'         => __( 'Menu', 'gazettenews' ),
+		'gazettenews_font_breaking'     => __( 'Breaking news ticker', 'gazettenews' ),
+		'gazettenews_font_footer'       => __( 'Footer', 'gazettenews' ),
+		'gazettenews_font_single_title' => __( 'Single post title', 'gazettenews' ),
+		'gazettenews_font_single_body'  => __( 'Single post body', 'gazettenews' ),
+	);
+	foreach ( $font_fields as $id => $label ) {
+		$wp_customize->add_setting( $id, array(
+			'default'           => '',
+			'sanitize_callback' => 'gazettenews_sanitize_font_key',
+		) );
+		$wp_customize->add_control( $id, array(
+			'label'   => $label,
+			'section' => 'gazettenews_fonts',
+			'type'    => 'select',
+			'choices' => $font_choices,
+		) );
+	}
+
+	$wp_customize->add_setting( 'gazettenews_font_body_size', array(
+		'default'           => 15,
+		'sanitize_callback' => 'gazettenews_sanitize_body_size',
+	) );
+	$wp_customize->add_control( 'gazettenews_font_body_size', array(
+		'label'       => __( 'Body font size (px)', 'gazettenews' ),
+		'section'     => 'gazettenews_fonts',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min' => 12,
+			'max' => 22,
+		),
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_font_menu_size', array(
+		'default'           => 14,
+		'sanitize_callback' => 'gazettenews_sanitize_menu_size',
+	) );
+	$wp_customize->add_control( 'gazettenews_font_menu_size', array(
+		'label'       => __( 'Menu font size (px)', 'gazettenews' ),
+		'section'     => 'gazettenews_fonts',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min' => 11,
+			'max' => 22,
+		),
+	) );
+
+	$wp_customize->add_setting( 'gazettenews_font_single_title_size', array(
+		'default'           => 42,
+		'sanitize_callback' => 'gazettenews_sanitize_single_title_size',
+	) );
+	$wp_customize->add_control( 'gazettenews_font_single_title_size', array(
+		'label'       => __( 'Single post title size (px)', 'gazettenews' ),
+		'section'     => 'gazettenews_fonts',
+		'type'        => 'number',
+		'input_attrs' => array(
+			'min' => 22,
+			'max' => 64,
+		),
+	) );
+
 	$wp_customize->add_setting( 'gazettenews_logo_line1', array(
 		'default'           => '',
 		'sanitize_callback' => 'sanitize_text_field',

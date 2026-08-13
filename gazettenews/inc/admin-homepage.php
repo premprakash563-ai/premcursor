@@ -261,7 +261,7 @@ function gazettenews_admin_homepage_page() {
 			</table>
 
 			<h2><?php esc_html_e( 'Modules', 'gazettenews' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Add sections, change the Title (section name), set Left / Right / Full width, then drag to reorder. Ads can go in any column.', 'gazettenews' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Add sections, change the Title, font, and size, set Left / Right / Full width, then drag to reorder. Site-wide fonts: Appearance → Customize → Gazette News → Fonts.', 'gazettenews' ); ?></p>
 
 			<div id="gn-sections" class="gn-sections">
 				<?php
@@ -299,6 +299,9 @@ function gazettenews_admin_homepage_page() {
 					'count'     => 4,
 					'position'  => 'left',
 					'headstyle' => 'default',
+					'font'      => '',
+					'title_size'=> 0,
+					'text_size' => 0,
 					'html'      => '',
 					'image'     => '',
 					'link'      => '',
@@ -333,6 +336,16 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 	if ( ! isset( $section['link'] ) ) {
 		$section['link'] = '';
 	}
+	if ( ! isset( $section['font'] ) ) {
+		$section['font'] = '';
+	}
+	if ( ! isset( $section['title_size'] ) ) {
+		$section['title_size'] = 0;
+	}
+	if ( ! isset( $section['text_size'] ) ) {
+		$section['text_size'] = 0;
+	}
+	$fonts = gazettenews_font_choices();
 	?>
 	<div class="gn-section-row" data-type="<?php echo esc_attr( $section['type'] ); ?>">
 		<input type="hidden" name="sections[<?php echo esc_attr( $i ); ?>][id]" value="<?php echo esc_attr( $section['id'] ? $section['id'] : uniqid( 'sec', false ) ); ?>">
@@ -394,6 +407,22 @@ function gazettenews_admin_section_row( $i, $section, $types, $layouts, $cats ) 
 				<label class="gn-f gn-f-count">
 					<?php esc_html_e( 'Post / video count', 'gazettenews' ); ?>
 					<input type="number" min="1" max="100" name="sections[<?php echo esc_attr( $i ); ?>][count]" value="<?php echo esc_attr( (string) $section['count'] ); ?>">
+				</label>
+				<label class="gn-f gn-f-font">
+					<?php esc_html_e( 'Font', 'gazettenews' ); ?>
+					<select name="sections[<?php echo esc_attr( $i ); ?>][font]">
+						<?php foreach ( $fonts as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $section['font'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<label class="gn-f gn-f-tsize">
+					<?php esc_html_e( 'Title size px (0=default)', 'gazettenews' ); ?>
+					<input type="number" min="0" max="48" name="sections[<?php echo esc_attr( $i ); ?>][title_size]" value="<?php echo esc_attr( (string) $section['title_size'] ); ?>">
+				</label>
+				<label class="gn-f gn-f-fsize">
+					<?php esc_html_e( 'Text size px (0=default)', 'gazettenews' ); ?>
+					<input type="number" min="0" max="28" name="sections[<?php echo esc_attr( $i ); ?>][text_size]" value="<?php echo esc_attr( (string) $section['text_size'] ); ?>">
 				</label>
 				<label class="gn-f gn-f-extra">
 					<?php esc_html_e( 'Extra category IDs (for 3 columns)', 'gazettenews' ); ?>

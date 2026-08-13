@@ -268,8 +268,11 @@ function gazettenews_sanitize_section( $row ) {
 		'layout'   => $layout,
 		'count'     => isset( $row['count'] ) ? min( 100, max( 1, absint( $row['count'] ) ) ) : 4,
 		'position'  => $position,
-		'headstyle' => $head,
-		'html'      => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
+		'headstyle'  => $head,
+		'font'       => gazettenews_sanitize_font_key( isset( $row['font'] ) ? $row['font'] : '' ),
+		'title_size' => gazettenews_sanitize_font_size( isset( $row['title_size'] ) ? $row['title_size'] : 0, 0, 48 ),
+		'text_size'  => gazettenews_sanitize_font_size( isset( $row['text_size'] ) ? $row['text_size'] : 0, 0, 28 ),
+		'html'       => isset( $row['html'] ) ? wp_kses_post( $row['html'] ) : '',
 		'image'     => isset( $row['image'] ) ? esc_url_raw( $row['image'] ) : '',
 		'link'      => isset( $row['link'] ) ? sanitize_text_field( $row['link'] ) : '',
 		'extra'     => isset( $row['extra'] ) ? sanitize_text_field( $row['extra'] ) : '',
@@ -344,37 +347,27 @@ function gazettenews_flush_home_columns( $left, $right, &$used ) {
 }
 
 function gazettenews_render_section( $section, &$used, $in_column = false ) {
+	echo '<div' . gazettenews_section_font_attr( $section ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	$type = $section['type'];
 	if ( 'mosaic' === $type ) {
 		gazettenews_render_mosaic( $section, $used, $in_column );
-		return;
-	}
-	if ( 'ad' === $type ) {
+	} elseif ( 'ad' === $type ) {
 		gazettenews_render_ad_unit( $section, $in_column );
-		return;
-	}
-	if ( 'html' === $type && ! empty( $section['html'] ) ) {
+	} elseif ( 'html' === $type && ! empty( $section['html'] ) ) {
 		echo '<section class="module module-html">' . wp_kses_post( $section['html'] ) . '</section>';
-		return;
-	}
-	if ( 'shop' === $type ) {
+	} elseif ( 'shop' === $type ) {
 		gazettenews_home_products( $section['count'], $section['title'] );
-		return;
-	}
-	if ( 'video' === $type ) {
+	} elseif ( 'video' === $type ) {
 		gazettenews_render_video_playlist( $section );
-		return;
-	}
-	if ( 'facebook' === $type ) {
+	} elseif ( 'facebook' === $type ) {
 		gazettenews_render_facebook( $section );
-		return;
-	}
-	if ( 'hero' === $type || 'posts' === $type ) {
+	} elseif ( 'hero' === $type || 'posts' === $type ) {
 		if ( 'hero' === $type ) {
 			$section['layout'] = 'hero';
 		}
 		gazettenews_render_posts_module( $section, $used );
 	}
+	echo '</div>';
 }
 
 function gazettenews_render_mosaic( $section, &$used, $in_column = false ) {
