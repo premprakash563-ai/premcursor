@@ -16,9 +16,8 @@ $current_year  = (int) date('Y');
 // $current_year  = 2025;
 
 if (isset($_SESSION['user_id'])) {
-    // Recalculate pending months with FIFO payment allocation.
-    // Example: July/Aug/Sep/Oct due (2000 each), user pays 4000 in Oct -> clears July + Aug only.
-    ms_sync_all_notifications($pdo, $current_day, $current_month, $current_year);
+    // 20th se current month ki notification add karo (payments table touch nahi hoti).
+    ms_sync_current_month_notifications($pdo, $current_day, $current_month, $current_year);
 
     $fetch_sql = "SELECT m.first_name, m.last_name, m.id, m.monthly_ms,
                   COUNT(n.id) as pending_months,

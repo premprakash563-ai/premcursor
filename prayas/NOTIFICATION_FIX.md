@@ -2,35 +2,32 @@
 
 ## Problem
 
-Payments are always recorded in the **current month**, but pending MS can span multiple older months. The old logic deleted a notification only when `payments.month = notifications.month`, so an October payment cleared October even when July/August were still unpaid.
+Payments are recorded in the **current month** only. The old logic deleted a notification only when `payments.month = notifications.month`, so an October payment cleared October even when older months were still pending.
 
-## Fix
+## Fix (payments table untouched)
 
-FIFO allocation:
+Notification logic **does not read or change** the `payments` table.
 
-1. Build all due months for a member (from join/start date through today; current month becomes due on the 20th).
-2. Sum all payments for that member.
-3. Apply payment total to the **oldest due months first**.
-4. Remaining months stay in `notifications`.
+1. **20th cron (header):** add current-month notification if missing.
+2. **On payment save:** `floor(amount / monthly_ms)` oldest notifications are deleted.
 
 ### Example
 
-| Month | Due |
-| --- | --- |
-| July | ₹2000 |
-| August | ₹2000 |
-| September | ₹2000 |
-| October | ₹2000 |
+4 pending months (July–October), `monthly_ms = 2000`, user pays **₹4000 in October**:
 
-User pays **₹4000 in October** → July + August cleared, **September + October still pending**.
+- `floor(4000 / 2000) = 2`
+- Delete 2 oldest notifications → July + August removed
+- September + October still pending
+
+If 8 months pending and user pays ₹8000 → 4 oldest notifications removed.
 
 ## Files
 
-- `include/notification_logic.php` — FIFO sync helpers
-- `include/payment_hooks.php` — call after saving a payment
-- `header.php` — uses `ms_sync_all_notifications()` instead of month-matched DELETE
+- `include/notification_logic.php`
+- `include/payment_hooks.php`
+- `header.php`
 
-## Integrate in `payment_add.php`
+## `payment_add.php` integration
 
 After inserting the payment:
 
@@ -39,14 +36,20 @@ require_once 'include/payment_hooks.php';
 payment_add_after_save($pdo, $member_id, (float) $amount);
 ```
 
-If your `payments` table has no `amount` column, each payment row is treated as one full `monthly_ms`.
+## `header.php` change
 
-## Optional member fields
+Replace old sync + payments-based DELETE with:
 
-For accurate due-month history, set one of these on `members`:
+```php
+require_once 'include/notification_logic.php';
+ms_sync_current_month_notifications($pdo, $current_day, $current_month, $current_year);
+```
 
-- `ms_start_month` + `ms_start_year` (recommended)
-- `join_date`
-- `created_at`
+Remove this old block completely:
 
-Without them, the helper falls back to the member's first payment month.
+```php
+$del_sql = "DELETE n FROM notifications n
+            INNER JOIN payments p ON n.member_id = p.member_id
+            AND n.month = p.month AND n.year = p.year";
+$pdo->query($del_sql);
+```
